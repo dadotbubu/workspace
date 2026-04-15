@@ -52,7 +52,7 @@ input, textarea { font-family: inherit; }
   padding: 0 14px; height: 52px; gap: 10px;
 }
 .nav-logo {
-  font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; font-size: 17px; font-weight: 700;
   color: var(--forest); letter-spacing: -0.02em; flex-shrink: 0;
 }
 .nav-logo span { color: var(--sage); }
@@ -341,7 +341,11 @@ input, textarea { font-family: inherit; }
   display: flex; align-items: center; gap: 10px;
   background: var(--card-bg); border: 1px solid var(--stone);
   border-radius: 12px; padding: 12px 14px;
+  cursor: grab;
 }
+.cat-edit-row:active { cursor: grabbing; }
+.cat-edit-row.dragging { opacity: 0.4; }
+.cat-edit-row.drag-over { outline: 2px dashed var(--sage); outline-offset: 2px; }
 .cat-edit-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .cat-edit-name {
   flex: 1; font-size: 14px; font-weight: 500; color: var(--forest);
@@ -349,16 +353,13 @@ input, textarea { font-family: inherit; }
 }
 .cat-edit-name:focus { background: var(--muted); padding: 4px 8px; border-radius: 6px; }
 .cat-edit-count { font-size: 12px; color: var(--dim); }
-.cat-edit-del, .cat-edit-tags, .cat-edit-move {
+.cat-edit-del, .cat-edit-tags {
   background: none; border: none; cursor: pointer;
   font-size: 13px; padding: 4px 6px;
   color: var(--clay); transition: color 0.2s;
 }
 .cat-edit-del:hover { color: var(--terra); }
 .cat-edit-tags:hover { color: var(--sage); }
-.cat-edit-move:hover { color: var(--forest); }
-.cat-edit-moves { display: flex; flex-direction: column; gap: 2px; margin-right: 4px; }
-.cat-edit-move { padding: 2px 4px; font-size: 10px; line-height: 1; }
 .cat-add-row { display: flex; gap: 8px; }
 .cat-add-input, .tag-add-input {
   flex: 1; background: var(--muted); border: 1.5px solid transparent;
@@ -500,7 +501,7 @@ input, textarea { font-family: inherit; }
 }
 .reader-header-inner { max-width: 720px; margin: 0 auto; }
 .reader-title {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 22px; font-weight: 700; color: var(--forest);
   line-height: 1.35; margin-bottom: 8px; outline: none;
 }
@@ -538,7 +539,7 @@ input, textarea { font-family: inherit; }
 }
 .note-header-left {
   display: flex; align-items: center; gap: 7px;
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 13px; font-weight: 700; color: var(--forest);
 }
 .note-toggle-icon { color: var(--dim); transition: transform 0.3s; }
@@ -628,7 +629,7 @@ input, textarea { font-family: inherit; }
   margin-bottom: 4px;
 }
 .preview-title {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 15px; font-weight: 700;
   color: var(--forest);
   line-height: 1.35;
@@ -658,7 +659,7 @@ input, textarea { font-family: inherit; }
   text-align: center; font-size: 11px;
   color: var(--dim); font-style: italic;
   margin-top: 12px;
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   letter-spacing: -0.01em;
 }
 @media (max-width: 480px) {
@@ -1373,17 +1374,13 @@ function saveNewWork() {
 function openCatManage() { renderCatEditList(); openSheet('catManagePanel'); }
 function renderCatEditList() {
   const list = $('#catEditList');
-  list.innerHTML = STATE.categories.map((c, i) => {
+  list.innerHTML = STATE.categories.map(c => {
     const count = STATE.links.filter(l => l.categoryId === c.id).length;
     const canDel = !c.isFallback;
-    const isFirst = i === 0;
-    const isLast = i === STATE.categories.length - 1;
     return `
-      <div class="cat-edit-row" data-id="${c.id}">
-        <div class="cat-edit-moves">
-          <button class="cat-edit-move" onclick="moveCat('${c.id}',-1)" title="위로" ${isFirst?'disabled':''}>▲</button>
-          <button class="cat-edit-move" onclick="moveCat('${c.id}',1)" title="아래로" ${isLast?'disabled':''}>▼</button>
-        </div>
+      <div class="cat-edit-row" data-id="${c.id}" draggable="true"
+        ondragstart="catDragStart(event)" ondragend="catDragEnd(event)"
+        ondragover="catDragOver(event)" ondrop="catDrop(event)">
         <div class="cat-edit-dot" style="background:${c.color}"></div>
         <input class="cat-edit-name" value="${escapeHtml(c.name)}" onchange="renameCat('${c.id}', this.value)" />
         <span class="cat-edit-count">${count}개</span>
@@ -1409,12 +1406,31 @@ function renameCat(id, name) {
   c.name = name; saveState();
   renderCatBar(); renderChatTopics(); renderList();
 }
-function moveCat(id, dir) {
-  const idx = STATE.categories.findIndex(c => c.id === id);
-  if (idx < 0) return;
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= STATE.categories.length) return;
-  [STATE.categories[idx], STATE.categories[newIdx]] = [STATE.categories[newIdx], STATE.categories[idx]];
+let _dragCatId = null;
+function catDragStart(e) {
+  _dragCatId = e.target.dataset.id;
+  e.target.classList.add('dragging');
+}
+function catDragEnd(e) {
+  e.target.classList.remove('dragging');
+  $$('.cat-edit-row').forEach(el => el.classList.remove('drag-over'));
+}
+function catDragOver(e) {
+  e.preventDefault();
+  const row = e.target.closest('.cat-edit-row');
+  if (row && row.dataset.id !== _dragCatId) row.classList.add('drag-over');
+}
+function catDrop(e) {
+  e.preventDefault();
+  const row = e.target.closest('.cat-edit-row');
+  if (!row) return;
+  const targetId = row.dataset.id;
+  if (targetId === _dragCatId) return;
+  const fromIdx = STATE.categories.findIndex(c => c.id === _dragCatId);
+  const toIdx = STATE.categories.findIndex(c => c.id === targetId);
+  if (fromIdx < 0 || toIdx < 0) return;
+  const [moved] = STATE.categories.splice(fromIdx, 1);
+  STATE.categories.splice(toIdx, 0, moved);
   saveState(); renderCatEditList(); renderCatBar(); renderChatTopics();
 }
 function deleteCat(id) {
