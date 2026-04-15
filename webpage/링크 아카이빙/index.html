@@ -252,11 +252,11 @@ input, textarea { font-family: inherit; }
 .chat-topic.auto { font-style: italic; }
 .chat-topic.auto.selected { background: var(--dim); border-color: var(--dim); }
 
-.chat-input-row { display: flex; align-items: center; gap: 8px; }
+.chat-input-row { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .chat-input-wrap {
-  flex: 1; display: flex; align-items: center;
+  flex: 1; min-width: 0; display: flex; align-items: center;
   background: var(--card-bg); border: 1.5px solid var(--stone);
-  border-radius: 22px; padding: 9px 16px; gap: 8px;
+  border-radius: 22px; padding: 9px 12px; gap: 6px;
   transition: all 0.2s;
   box-shadow: 0 2px 12px -4px rgba(45,58,49,0.08);
 }
