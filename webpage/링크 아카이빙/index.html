@@ -350,13 +350,16 @@ input, textarea { font-family: inherit; }
 }
 .cat-edit-name:focus { background: var(--muted); padding: 4px 8px; border-radius: 6px; }
 .cat-edit-count { font-size: 12px; color: var(--dim); }
-.cat-edit-del, .cat-edit-tags {
+.cat-edit-del, .cat-edit-tags, .cat-edit-move {
   background: none; border: none; cursor: pointer;
   font-size: 13px; padding: 4px 6px;
   color: var(--clay); transition: color 0.2s;
 }
 .cat-edit-del:hover { color: var(--terra); }
 .cat-edit-tags:hover { color: var(--sage); }
+.cat-edit-move:hover { color: var(--forest); }
+.cat-edit-moves { display: flex; flex-direction: column; gap: 2px; margin-right: 4px; }
+.cat-edit-move { padding: 2px 4px; font-size: 10px; line-height: 1; }
 .cat-add-row { display: flex; gap: 8px; }
 .cat-add-input, .tag-add-input {
   flex: 1; background: var(--muted); border: 1.5px solid transparent;
@@ -393,11 +396,12 @@ input, textarea { font-family: inherit; }
   font-size: 12px; font-weight: 500; color: var(--forest);
 }
 .tag-edit-chip.common { border-style: solid; }
-.tag-edit-chip-del {
+.tag-edit-chip-del, .tag-edit-chip-move {
   background: none; border: none; cursor: pointer;
-  color: var(--clay); font-size: 14px; padding: 0 2px; line-height: 1;
+  color: var(--clay); font-size: 12px; padding: 0 2px; line-height: 1;
 }
 .tag-edit-chip-del:hover { color: var(--terra); }
+.tag-edit-chip-move:hover { color: var(--forest); }
 .tag-empty { font-size: 12px; color: var(--dim); font-style: italic; padding: 8px 0; }
 
 /* 폼 필드 (시트) */
@@ -1367,11 +1371,17 @@ function saveNewWork() {
 function openCatManage() { renderCatEditList(); openSheet('catManagePanel'); }
 function renderCatEditList() {
   const list = $('#catEditList');
-  list.innerHTML = STATE.categories.map(c => {
+  list.innerHTML = STATE.categories.map((c, i) => {
     const count = STATE.links.filter(l => l.categoryId === c.id).length;
     const canDel = !c.isFallback;
+    const isFirst = i === 0;
+    const isLast = i === STATE.categories.length - 1;
     return `
       <div class="cat-edit-row" data-id="${c.id}">
+        <div class="cat-edit-moves">
+          <button class="cat-edit-move" onclick="moveCat('${c.id}',-1)" title="위로" ${isFirst?'disabled':''}>▲</button>
+          <button class="cat-edit-move" onclick="moveCat('${c.id}',1)" title="아래로" ${isLast?'disabled':''}>▼</button>
+        </div>
         <div class="cat-edit-dot" style="background:${c.color}"></div>
         <input class="cat-edit-name" value="${escapeHtml(c.name)}" onchange="renameCat('${c.id}', this.value)" />
         <span class="cat-edit-count">${count}개</span>
@@ -1396,6 +1406,14 @@ function renameCat(id, name) {
   const c = findCat(id); if (!c) return;
   c.name = name; saveState();
   renderCatBar(); renderChatTopics(); renderList();
+}
+function moveCat(id, dir) {
+  const idx = STATE.categories.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= STATE.categories.length) return;
+  [STATE.categories[idx], STATE.categories[newIdx]] = [STATE.categories[newIdx], STATE.categories[idx]];
+  saveState(); renderCatEditList(); renderCatBar(); renderChatTopics();
 }
 function deleteCat(id) {
   const c = findCat(id); if (!c || c.isFallback) return;
@@ -1438,9 +1456,11 @@ function renderTagManage() {
     ? STATE.tags.filter(t => t.scope === 'common')
     : STATE.tags.filter(t => t.scope === 'category' && t.categoryId === STATE.ui.tagScopeCat);
   if (tags.length === 0) list.innerHTML = `<div class="tag-empty">아직 없어요. 아래에서 추가하세요.</div>`;
-  else list.innerHTML = tags.map(t => `
+  else list.innerHTML = tags.map((t, i) => `
     <span class="tag-edit-chip ${t.scope==='common'?'common':''}">
+      <button class="tag-edit-chip-move" onclick="moveTag('${t.id}',-1)" title="왼쪽" ${i===0?'disabled':''}>◀</button>
       #${escapeHtml(t.name)}
+      <button class="tag-edit-chip-move" onclick="moveTag('${t.id}',1)" title="오른쪽" ${i===tags.length-1?'disabled':''}>▶</button>
       <button class="tag-edit-chip-del" onclick="deleteTag('${t.id}')" title="삭제">×</button>
     </span>
   `).join('');
@@ -1466,6 +1486,22 @@ function deleteTag(id) {
   STATE.links.forEach(l => { l.tagIds = l.tagIds.filter(x => x !== id); });
   if (STATE.filter.tagId === id) STATE.filter.tagId = null;
   saveState(); renderTagManage(); renderTagBar(); renderList();
+}
+function moveTag(id, dir) {
+  const t = findTag(id); if (!t) return;
+  const isCommon = STATE.ui.tagScope === 'common';
+  const tags = isCommon
+    ? STATE.tags.filter(x => x.scope === 'common')
+    : STATE.tags.filter(x => x.scope === 'category' && x.categoryId === STATE.ui.tagScopeCat);
+  const idx = tags.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= tags.length) return;
+  const globalIdx = STATE.tags.indexOf(t);
+  const swapTag = tags[newIdx];
+  const swapGlobalIdx = STATE.tags.indexOf(swapTag);
+  [STATE.tags[globalIdx], STATE.tags[swapGlobalIdx]] = [STATE.tags[swapGlobalIdx], STATE.tags[globalIdx]];
+  saveState(); renderTagManage(); renderTagBar();
 }
 
 /* ── 링크 정보 편집 ── */
