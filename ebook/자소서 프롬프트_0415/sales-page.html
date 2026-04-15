@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 자소서 프롬프트 북 · 합격 자소서 학습형 프롬프트</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<style>
+  :root {
+    --ink: #2a2824;
+    --ink-deep: #1a1a1a;
+    --paper: #fbf8f1;
+    --paper-warm: #f5ead0;
+    --accent: #c89a3a;
+    --accent-light: #fff3d4;
+    --accent-deep: #a67c20;
+    --sage: #8ea888;
+    --sage-deep: #6e8a68;
+    --muted: #6a6258;
+    --border: #e0dac7;
+    --danger: #c83a2a;
+    --success: #4a7c59;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;
+    font-weight: 400;
+    line-height: 1.8;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 80px 24px 100px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 60% 30%, #3a2a20 0%, transparent 55%),
+                radial-gradient(ellipse at 20% 80%, #2a1a10 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-hook {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-hook span {
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: #a89a85;
+    line-height: 1.8;
+    max-width: 480px;
+    margin: 0 auto 36px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-badges {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-badge {
+    background: rgba(200,154,58,0.15);
+    border: 1px solid var(--accent);
+    color: #e8c878;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* SECTION */
+  .section {
+    padding: 72px 24px;
+  }
+
+  .section-tight {
+    padding: 48px 24px;
+  }
+
+  .section-dark {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .section-cream {
+    background: var(--accent-light);
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .section-h {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .section-desc {
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 520px;
+    margin: 0 auto 40px;
+    line-height: 1.9;
+  }
+
+  .section-dark .section-desc { color: #a89a85; }
+
+  /* PAIN POINTS */
+  .pains {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .pains { grid-template-columns: 1fr; }
+  }
+
+  .pain-item {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .pain-check {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .pain-text {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* DIFFERENTIATION (80% vs 100%) */
+  .diff-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin: 40px 0 24px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+  }
+
+  @media (max-width: 600px) {
+    .diff-wrap { grid-template-columns: 1fr; }
+  }
+
+  .diff-card {
+    padding: 36px 28px;
+    text-align: center;
+  }
+
+  .diff-card.bad {
+    background: #2a2520;
+    color: #a09880;
+  }
+
+  .diff-card.good {
+    background: var(--accent);
+    color: white;
+  }
+
+  .diff-percent {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .diff-card.bad .diff-percent { color: #c83a2a; }
+
+  .diff-tag {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+
+  .diff-body {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .diff-insight {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 24px 28px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.9;
+    border-left: 4px solid var(--accent);
+  }
+
+  .diff-insight strong { color: #e8c878; }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-row:last-child { border-bottom: none; }
+
+  .compare-row.head {
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .compare-cell {
+    padding: 18px 16px;
+    font-size: 14px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+  }
+
+  .compare-cell:last-child { border-right: none; }
+
+  .compare-row.head .compare-cell { border-right-color: rgba(255,255,255,0.1); }
+
+  .compare-cell.label {
+    font-weight: 500;
+    color: var(--muted);
+    background: #faf7f0;
+  }
+
+  .compare-cell.bad { color: #c83a2a; }
+  .compare-cell.good { color: var(--accent-deep); font-weight: 600; }
+
+  /* CONTENTS BOX */
+  .contents {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 32px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.05);
+  }
+
+  .contents-item {
+    display: flex;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px dashed var(--border);
+    align-items: flex-start;
+  }
+
+  .contents-item:last-child { border-bottom: none; }
+
+  .contents-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .contents-title {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .contents-title .new {
+    display: inline-block;
+    background: var(--danger);
+    color: white;
+    font-family: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: 1px;
+  }
+
+  .contents-body {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* AUTHOR */
+  .author-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 40px 28px;
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .author-tag {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .author-name {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .author-name span { color: var(--accent); }
+
+  .author-desc {
+    font-size: 14px;
+    line-height: 1.95;
+    color: #d4cfc4;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .author-desc strong { color: #e8c878; font-weight: 500; }
+
+  /* FAQ */
+  .faq-item {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .faq-q {
+    padding: 18px 22px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    position: relative;
+    padding-right: 40px;
+  }
+
+  .faq-q::before {
+    content: 'Q.';
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 8px;
+  }
+
+  .faq-q::after {
+    content: '+';
+    position: absolute;
+    right: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: var(--muted);
+    transition: transform 0.2s;
+  }
+
+  .faq-item.open .faq-q::after {
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .faq-a {
+    padding: 0 22px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s, padding 0.3s;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--muted);
+  }
+
+  .faq-item.open .faq-a {
+    padding: 0 22px 20px;
+    max-height: 400px;
+  }
+
+  .faq-a::before {
+    content: 'A. ';
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* CTA */
+  .cta-section {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+    color: white;
+    padding: 80px 24px;
+    text-align: center;
+  }
+
+  .cta-headline {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+
+  .cta-sub {
+    font-size: 15px;
+    margin-bottom: 36px;
+    opacity: 0.92;
+    line-height: 1.8;
+  }
+
+  .cta-button {
+    display: inline-block;
+    background: var(--ink);
+    color: white;
+    padding: 20px 48px;
+    border-radius: 100px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.25);
+  }
+
+  .cta-note {
+    margin-top: 20px;
+    font-size: 12px;
+    opacity: 0.75;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink);
+    color: var(--muted);
+    padding: 40px 24px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.9;
+  }
+
+  footer strong { color: #d4cfc4; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">AI PROMPT BOOK</div>
+  <h1 class="hero-hook">
+    프롬프트 <span>2개</span>로,<br>
+    AI가 합격 자소서를<br>
+    뽑아냅니다
+  </h1>
+  <p class="hero-sub">
+    대기업 5번 이직한 기획자가<br>
+    5번 합격 자소서를 직접 학습시켜 만든<br>
+    합격형 자소서 프롬프트
+  </p>
+  <div class="hero-badges">
+    <span class="hero-badge">5대 합격 자소서 학습</span>
+    <span class="hero-badge">Claude 최적화</span>
+    <span class="hero-badge">여러 회사 재활용</span>
+  </div>
+</div>
+
+<!-- PAIN POINTS -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">For you</div>
+    <h2 class="section-h">이런 분을 위해 만들었습니다</h2>
+    <p class="section-desc">자소서 앞에서 하얀 화면만 보고 있다면,<br>이 프롬프트가 답이 될 수 있습니다.</p>
+
+    <div class="pains">
+      <div class="pain-item">
+        <div class="pain-check">✓</div>
+        <div class="pain-text">자소서 쓰려고 앉았는데 <strong>뭘 써야 할지 모르겠는</strong> 분</div>
+      </div>
+      <div class="pain-item">
+        <div class="pain-check">✓</div>
+        <div class="pain-text">AI로 써봤더니 "AI 티" 너무 나서 <strong>결국 다시 고친</strong> 분</div>
+      </div>
+      <div class="pain-item">
+        <div class="pain-check">✓</div>
+        <div class="pain-text">회사마다 자소서 <strong>처음부터 다시 쓰는 게 지친</strong> 분</div>
+      </div>
+      <div class="pain-item">
+        <div class="pain-check">✓</div>
+        <div class="pain-text">합격 자소서 구조·문체를 <strong>제대로 적용하고 싶은</strong> 분</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 80% vs 100% DIFFERENTIATION -->
+<div class="section section-cream">
+  <div class="container">
+    <div class="section-label">The difference</div>
+    <h2 class="section-h">프롬프트만 고도화해서는<br>80%밖에 못 나옵니다</h2>
+    <p class="section-desc">이 프롬프트북이 다른 이유입니다.</p>
+
+    <div class="diff-wrap">
+      <div class="diff-card bad">
+        <div class="diff-percent">80%</div>
+        <div class="diff-tag">일반 AI 프롬프트</div>
+        <div class="diff-body">
+          프롬프트 아무리 정교하게 짜도<br>
+          합격 자소서 <strong>문체·구조를<br>AI가 모르는 상태</strong>라<br>
+          결과물이 80% 수준에 그칩니다.
+        </div>
+      </div>
+      <div class="diff-card good">
+        <div class="diff-percent">100%</div>
+        <div class="diff-tag">이 프롬프트북</div>
+        <div class="diff-body">
+          대기업 <strong>5대 합격 자소서</strong>를<br>
+          학습시켜 만든 프롬프트라<br>
+          합격 자소서 <strong>동급 퀄리티</strong>로<br>
+          나옵니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="diff-insight">
+      <strong>왜 학습이 중요한가요?</strong><br>
+      자소서는 "잘 쓴 글"이 아니라 "합격하는 글"이어야 합니다.<br>
+      합격 자소서의 소제목 스타일, 두괄식 구조, 마무리 포부 문장 — 이 모든 패턴을<br>
+      프롬프트에 녹여 넣어야 AI가 "합격하는 자소서"를 씁니다.
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON TABLE -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">Compare</div>
+    <h2 class="section-h">수동 작성 vs 이 프롬프트북</h2>
+    <p class="section-desc">시간, 재활용, 퀄리티 — 모든 면에서 차이가 납니다.</p>
+
+    <div class="compare-table">
+      <div class="compare-row head">
+        <div class="compare-cell">항목</div>
+        <div class="compare-cell">수동 작성</div>
+        <div class="compare-cell">이 프롬프트북</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label">자소서 1편 작성</div>
+        <div class="compare-cell bad">약 3시간</div>
+        <div class="compare-cell good">30분</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label">여러 회사 지원</div>
+        <div class="compare-cell bad">매번 처음부터</div>
+        <div class="compare-cell good">인터뷰 1번으로 평생</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label">합격 자소서 구조 반영</div>
+        <div class="compare-cell bad">감으로 작성</div>
+        <div class="compare-cell good">공식 자동 적용</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label">문항별 유형 분류</div>
+        <div class="compare-cell bad">수동 판단</div>
+        <div class="compare-cell good">6가지 유형 자동 분류</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label">결과물 퀄리티</div>
+        <div class="compare-cell bad">개인 편차 큼</div>
+        <div class="compare-cell good">합격 자소서 동급</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENTS -->
+<div class="section section-cream">
+  <div class="container">
+    <div class="section-label">What's inside</div>
+    <h2 class="section-h">이 PDF에 들어있는 것</h2>
+    <p class="section-desc">자소서 작성에 필요한 모든 것을 담았습니다.<br>프롬프트 2개와 합격 공식, 실제 예시까지.</p>
+
+    <div class="contents">
+      <div class="contents-item">
+        <div class="contents-num">1</div>
+        <div>
+          <div class="contents-title">PROMPT 1 · 심층 인터뷰 프롬프트</div>
+          <div class="contents-body">30분 동안 AI가 내 경험을 체계적으로 인터뷰해서 자소서 소재로 정리합니다. 한 번 만들면 여러 회사에 재활용됩니다.</div>
+        </div>
+      </div>
+      <div class="contents-item">
+        <div class="contents-num">2</div>
+        <div>
+          <div class="contents-title">PROMPT 2 · 합격 자소서 생성 프롬프트</div>
+          <div class="contents-body">5대 합격 자소서를 학습시킨 프롬프트. 회사 정보 + 문항만 넣으면 합격 자소서 동급 퀄리티로 생성됩니다.</div>
+        </div>
+      </div>
+      <div class="contents-item">
+        <div class="contents-num">3</div>
+        <div>
+          <div class="contents-title">6가지 문항 유형별 마무리 공식</div>
+          <div class="contents-body">강점/실패/갈등/희생/협업/지원동기 — 6가지 유형별로 다른 마무리 문장 공식을 정리했습니다.</div>
+        </div>
+      </div>
+      <div class="contents-item">
+        <div class="contents-num">4</div>
+        <div>
+          <div class="contents-title">합격 자소서 실제 예시 + 4단계 구조</div>
+          <div class="contents-body">소제목 · 두괄식 · 경험 · 성과 포부로 이어지는 4단계 구조와 합격 자소서 실제 예시가 함께 수록되어 있습니다.</div>
+        </div>
+      </div>
+      <div class="contents-item">
+        <div class="contents-num">5</div>
+        <div>
+          <div class="contents-title">합격 소제목 스타일 가이드</div>
+          <div class="contents-body">"반품율 50%를 20%로 낮춘 손수건 한 장" 같은 합격 소제목 공식 5가지 패턴을 바로 적용할 수 있게 정리했습니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTHOR -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">Writer</div>
+    <h2 class="section-h">만든 사람</h2>
+
+    <div class="author-card">
+      <div class="author-tag">YUDIT · 유디트</div>
+      <div class="author-name">대기업 <span>5번 이직</span>, 직무 변경까지</div>
+      <div class="author-desc">
+        매번 새로운 회사, 새로운 자소서.<br>
+        처음엔 막막했고, 반복하면서 공식이 생겼습니다.<br><br>
+        <strong>"자소서는 결국 나를 아는 것에서 시작된다."</strong><br><br>
+        5번의 합격으로 증명한 공식을,<br>
+        수십 번의 AI 테스트로 프롬프트화했습니다.<br>
+        3개 AI 비교에서 압도적 1위, 합격 자소서 동급 퀄리티를 검증했습니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="section section-cream">
+  <div class="container">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-h">자주 묻는 질문</h2>
+
+    <div class="faq-item">
+      <div class="faq-q">Claude 없이 ChatGPT나 Gemini로도 쓸 수 있나요?</div>
+      <div class="faq-a">네, 가능합니다. 단, 이 프롬프트는 Claude에 최적화되어 있어 Claude에서 가장 좋은 결과가 나옵니다. ChatGPT·Gemini로도 사용 가능하며, claude.ai는 무료 가입으로 바로 쓸 수 있습니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">신입인데 쓸 소재가 없어도 작성되나요?</div>
+      <div class="faq-a">네. PROMPT 1이 알바·동아리·학교 경험까지 인터뷰로 뽑아내기 때문에, 화려한 인턴 경험이 없어도 자소서 소재로 정리됩니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">경력자도 사용 가능한가요?</div>
+      <div class="faq-a">네. 신입·경력 톤이 분기되어 자동 적용됩니다. 경력자는 "즉시 기여" 톤으로, 이직 사유도 자연스럽게 녹여 작성됩니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">한 번 구매하면 여러 회사에 써도 되나요?</div>
+      <div class="faq-a">네. PROMPT 1 인터뷰 결과지는 한 번만 만들면 평생 재활용됩니다. 회사 정보와 문항만 바꿔서 PROMPT 2를 돌리면 됩니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">결과물이 "AI 티" 나지 않나요?</div>
+      <div class="faq-a">PROMPT 1이 내 언어·경험을 30분간 깊게 인터뷰하기 때문에, AI가 "내 이야기를 합격 문체로" 옮겨씁니다. 일반 AI 자소서와는 결이 다릅니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">환불이 가능한가요?</div>
+      <div class="faq-a">디지털 파일 특성상 구매 후 환불이 어렵습니다. 구매 전 상세 설명을 충분히 읽어주세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2 class="cta-headline">
+    자소서 앞에서 멍 때리는 시간,<br>
+    이제 끝낼 시간입니다
+  </h2>
+  <p class="cta-sub">
+    프롬프트 2개로 완성하는 합격 자소서.<br>
+    합격 자소서 동급 퀄리티를 지금 바로 손에 넣으세요.
+  </p>
+  <a href="#" class="cta-button">구매하기 →</a>
+  <div class="cta-note">구매 후 즉시 PDF 다운로드 · 평생 소장 · 여러 회사 재활용</div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <strong>AI 자소서 프롬프트 북</strong> · 대기업 5번 이직한 기획자가 만든 합격형 프롬프트<br><br>
+  © 유디트(yudit). All rights reserved.<br>
+  본 자료의 무단 복제·배포·공유·재판매·2차 가공을 금지합니다.
+</footer>
+
+<script>
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => {
+      item.classList.toggle('open');
+    });
+  });
+</script>
+
+</body>
+</html>
