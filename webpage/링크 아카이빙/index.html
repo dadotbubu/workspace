@@ -1891,7 +1891,7 @@ function renderReader() {
     myworkContent.classList.add('hidden');
     // 카드 정보 채우기
     const dom = link.domain || safeHostname(link.url);
-    const fullUrl = link.url.startsWith('http') ? link.url : 'https://' + link.url;
+    const fullUrl = /^[a-z]+:\/\//i.test(link.url) ? link.url : 'https://' + link.url;
     $('#previewCard').href = fullUrl;
     $('#previewFavicon').src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dom)}&sz=128`;
     $('#previewFavicon').style.opacity = '1';
