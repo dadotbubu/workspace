@@ -260,6 +260,33 @@ input, textarea { font-family: inherit; }
 .chat-topic.auto { font-style: italic; }
 .chat-topic.auto.selected { background: var(--dim); border-color: var(--dim); }
 
+.chat-tags {
+  display: flex; align-items: center; gap: 5px;
+  overflow-x: auto; scrollbar-width: none; padding-bottom: 7px;
+}
+.chat-tags::-webkit-scrollbar { display: none; }
+.chat-tag {
+  flex-shrink: 0; font-size: 11px; font-weight: 500;
+  padding: 4px 10px; border-radius: 999px;
+  border: 1.5px solid rgba(194,123,102,0.3);
+  background: transparent; color: var(--terra);
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.18s; min-height: 26px;
+}
+.chat-tag:hover { border-color: var(--terra); }
+.chat-tag.selected { background: var(--terra); border-color: var(--terra); color: #fff; }
+
+.quick-tag-chip {
+  font-size: 13px; font-weight: 500;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1.5px solid rgba(194,123,102,0.3);
+  background: transparent; color: var(--terra);
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.18s;
+}
+.quick-tag-chip:hover { border-color: var(--terra); }
+.quick-tag-chip.selected { background: var(--terra); border-color: var(--terra); color: #fff; }
+
 .chat-input-row { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .chat-input-wrap {
   flex: 1; min-width: 0; display: flex; align-items: center;
@@ -772,6 +799,7 @@ input, textarea { font-family: inherit; }
 
 <div class="chat-bar">
   <div class="chat-topics" id="chatTopics"></div>
+  <div class="chat-tags" id="chatTags"></div>
   <div class="chat-input-row">
     <div class="chat-input-wrap">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DCCFC2" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -878,6 +906,16 @@ input, textarea { font-family: inherit; }
       <button class="sheet-btn secondary" onclick="quickSaveSkip()">건너뛰기</button>
       <button class="sheet-btn primary" onclick="quickSaveConfirm()">저장</button>
     </div>
+  </div>
+</div>
+
+<!-- 빠른 태그 편집 시트 -->
+<div class="overlay" id="quickTagPanel" onclick="if(event.target===this)closeSheet('quickTagPanel')">
+  <div class="sheet" style="min-height:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">태그 선택</div>
+    <div id="quickTagList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+    <button class="sheet-close" onclick="closeSheet('quickTagPanel')">완료</button>
   </div>
 </div>
 
@@ -1027,7 +1065,7 @@ function migrateFilter(state) {
   state.filter = Object.assign({ categoryId:'all', tagId:null, favoriteOnly:false, search:'' }, state.filter || {});
   if (typeof state.filter.favoriteOnly !== 'boolean') state.filter.favoriteOnly = false;
   if (typeof state.filter.search !== 'string') state.filter.search = '';
-  state.ui = state.ui || { chatCat: 'auto', tagScope: 'common', tagScopeCat: null };
+  state.ui = state.ui || { chatCat: 'auto', chatTags: [], tagScope: 'common', tagScopeCat: null };
 }
 
 function makeDefaultState(user) {
@@ -1037,7 +1075,7 @@ function makeDefaultState(user) {
       tags: [], links: [],
       filter: { categoryId:'all', tagId:null, favoriteOnly:false, search:'' },
       currentLinkId: null,
-      ui: { chatCat: 'auto', tagScope: 'common', tagScopeCat: null }
+      ui: { chatCat: 'auto', chatTags: [], tagScope: 'common', tagScopeCat: null }
     };
   }
   // 유로이 기본값 — 태그 샘플은 유지, 링크는 비움
@@ -1054,7 +1092,7 @@ function makeDefaultState(user) {
     links: [],
     filter: { categoryId:'all', tagId:null, favoriteOnly:false, search:'' },
     currentLinkId: null,
-    ui: { chatCat: 'auto', tagScope: 'common', tagScopeCat: null }
+    ui: { chatCat: 'auto', chatTags: [], tagScope: 'common', tagScopeCat: null }
   };
 }
 function loadUserState(user) {
@@ -1120,7 +1158,7 @@ async function syncFromCloud() {
         if (!STATE.links.find(x => x.id === l.id)) { STATE.links.push(l); added.links++; }
       });
       saveState();
-      renderCatBar(); renderTagBar(); renderChatTopics(); renderList(); renderFavToggle();
+      renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList(); renderFavToggle();
       showToast(`☁️ +${added.cats}카테고리, +${added.tags}태그, +${added.links}링크`);
     } else {
       showToast('☁️ 클라우드 데이터 없음');
@@ -1286,6 +1324,9 @@ function renderList() {
           </div>
         </div>
         <div class="link-icons" onclick="event.stopPropagation()">
+          <button class="icon-btn" onclick="openQuickTagEdit('${link.id}')" title="태그 편집">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
+          </button>
           <button class="icon-btn ${link.isFavorite?'fav-on':''}" onclick="toggleFav('${link.id}')" title="즐겨찾기">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="${link.isFavorite?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </button>
@@ -1296,7 +1337,7 @@ function renderList() {
 }
 
 /* ── 하단 카테고리 토글 ── */
-function renderChatTopics() {
+function renderChatTopics(); renderChatTags() {
   const cur = STATE.ui.chatCat;
   let html = `<button class="chat-topic auto ${cur==='auto'?'selected':''}" onclick="setChatCat('auto')">자동 분류</button>`;
   STATE.categories.forEach(c => {
@@ -1304,7 +1345,43 @@ function renderChatTopics() {
   });
   $('#chatTopics').innerHTML = html;
 }
-function setChatCat(id) { STATE.ui.chatCat = id; saveState(); renderChatTopics(); }
+function setChatCat(id) {
+  STATE.ui.chatCat = id;
+  STATE.ui.chatTags = []; // 카테고리 변경 시 태그 초기화
+  saveState(); renderChatTopics(); renderChatTags(); renderChatTags();
+}
+
+/* ── 하단 태그 토글 ── */
+function renderChatTags() {
+  const wrap = $('#chatTags');
+  // 자동 분류 시 태그 숨김
+  if (STATE.ui.chatCat === 'auto') {
+    wrap.innerHTML = '';
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  const selected = STATE.ui.chatTags || [];
+  // 현재 카테고리의 태그만 표시
+  const catTags = STATE.tags.filter(t => t.categoryId === STATE.ui.chatCat);
+  if (catTags.length === 0) {
+    wrap.innerHTML = '<span style="font-size:11px;color:var(--dim);padding:4px;">태그 없음</span>';
+    return;
+  }
+  let html = '';
+  catTags.forEach(t => {
+    const isOn = selected.includes(t.id);
+    html += `<button class="chat-tag ${isOn?'selected':''}" onclick="toggleChatTag('${t.id}')">#${escapeHtml(t.name)}</button>`;
+  });
+  wrap.innerHTML = html;
+}
+function toggleChatTag(tagId) {
+  if (!STATE.ui.chatTags) STATE.ui.chatTags = [];
+  const idx = STATE.ui.chatTags.indexOf(tagId);
+  if (idx >= 0) STATE.ui.chatTags.splice(idx, 1);
+  else STATE.ui.chatTags.push(tagId);
+  renderChatTags();
+}
 
 /* ── URL/메모 판별 + 저장 ── */
 function looksLikeUrl(s) {
@@ -1345,39 +1422,38 @@ function handleSend() {
   const chosenCat = STATE.ui.chatCat === 'auto'
     ? (isUrl ? autoClassify(text) : fallbackCatId())
     : STATE.ui.chatCat;
+  const chosenTags = (STATE.ui.chatCat !== 'auto' && STATE.ui.chatTags) ? [...STATE.ui.chatTags] : [];
   const link = {
     id: uid('l'),
     url: isUrl ? (text.startsWith('http') ? text : 'https://' + text) : '',
     title: isUrl ? dom : text,
     domain: isUrl ? dom : '',
     createdAt: Date.now(),
-    categoryId: chosenCat, tagIds: [],
+    categoryId: chosenCat, tagIds: chosenTags,
     isFavorite: false,
     itemType: isUrl ? 'link' : 'mywork',
     note: { text: '', images: [], collapsed: false },
     content: ''
   };
   STATE.links.unshift(link);
-  saveState(); renderList();
+  STATE.ui.chatTags = []; // 태그 초기화
+  saveState(); renderList(); renderChatTags();
   input.value = '';
 
   if (isUrl) {
     showToast('🔍 제목 가져오는 중...');
-    setTimeout(() => {
-      // 시트 먼저 열고 → 백그라운드에서 제목 채우기
-      openQuickSave(link.id);
-      fetchLinkMeta(link.url).then(meta => {
-        if (!meta) return;
-        const fetched = meta.title || '';
-        if (fetched) {
-          link.title = fetched;
-          saveState(); renderList();
-          // 시트가 열려있고 사용자가 아직 입력 안 했으면 자동 채우기
-          const inp = $('#quickSaveTitle');
-          if (inp && inp.value === '') inp.value = fetched;
-        }
-      });
-    }, 150);
+    // 백그라운드에서 제목 가져오기 (팝업 없이)
+    fetchLinkMeta(link.url).then(meta => {
+      if (!meta) { showToast('✓ 저장됨'); return; }
+      const fetched = meta.title || '';
+      if (fetched) {
+        link.title = fetched;
+        saveState(); renderList();
+        showToast('✓ 저장됨');
+      } else {
+        showToast('✓ 저장됨');
+      }
+    });
   } else {
     showToast('✓ 메모 저장됨');
   }
@@ -1483,14 +1559,14 @@ function addCategory() {
   const cat = { id: uid('c'), name, color: colors[Math.floor(Math.random()*colors.length)], builtin: false };
   STATE.categories.push(cat);
   saveState(); input.value = '';
-  renderCatEditList(); renderCatBar(); renderChatTopics();
+  renderCatEditList(); renderCatBar(); renderChatTopics(); renderChatTags();
   showToast('✓ 카테고리 추가됨');
 }
 function renameCat(id, name) {
   name = (name || '').trim(); if (!name) return;
   const c = findCat(id); if (!c) return;
   c.name = name; saveState();
-  renderCatBar(); renderChatTopics(); renderList();
+  renderCatBar(); renderChatTopics(); renderChatTags(); renderList();
 }
 let _dragCatId = null;
 function catDragStart(e) {
@@ -1517,7 +1593,7 @@ function catDrop(e) {
   if (fromIdx < 0 || toIdx < 0) return;
   const [moved] = STATE.categories.splice(fromIdx, 1);
   STATE.categories.splice(toIdx, 0, moved);
-  saveState(); renderCatEditList(); renderCatBar(); renderChatTopics();
+  saveState(); renderCatEditList(); renderCatBar(); renderChatTopics(); renderChatTags();
 }
 function deleteCat(id) {
   const c = findCat(id); if (!c || c.isFallback) return;
@@ -1529,7 +1605,7 @@ function deleteCat(id) {
   STATE.categories = STATE.categories.filter(x => x.id !== id);
   if (STATE.filter.categoryId === id) STATE.filter.categoryId = 'all';
   saveState();
-  renderCatEditList(); renderCatBar(); renderTagBar(); renderChatTopics(); renderList();
+  renderCatEditList(); renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList();
   showToast('✓ 삭제됐어요');
 }
 
@@ -1702,6 +1778,37 @@ function toggleFav(id) {
 }
 function toggleFavCurrent() { if (STATE.currentLinkId) toggleFav(STATE.currentLinkId); }
 
+/* ── 빠른 태그 편집 (목록에서) ── */
+let _quickTagLinkId = null;
+function openQuickTagEdit(linkId) {
+  const link = findLink(linkId); if (!link) return;
+  _quickTagLinkId = linkId;
+  const catTags = STATE.tags.filter(t => t.categoryId === link.categoryId);
+  const wrap = $('#quickTagList');
+  if (catTags.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--dim);font-size:13px;">이 카테고리에 태그가 없어요</p>';
+  } else {
+    wrap.innerHTML = catTags.map(t => {
+      const isOn = link.tagIds.includes(t.id);
+      return `<button class="quick-tag-chip ${isOn?'selected':''}" onclick="toggleQuickTag('${t.id}')">#${escapeHtml(t.name)}</button>`;
+    }).join('');
+  }
+  openSheet('quickTagPanel');
+}
+function toggleQuickTag(tagId) {
+  const link = findLink(_quickTagLinkId); if (!link) return;
+  const idx = link.tagIds.indexOf(tagId);
+  if (idx >= 0) link.tagIds.splice(idx, 1);
+  else link.tagIds.push(tagId);
+  saveState(); renderList();
+  // 다시 렌더링
+  const catTags = STATE.tags.filter(t => t.categoryId === link.categoryId);
+  $('#quickTagList').innerHTML = catTags.map(t => {
+    const isOn = link.tagIds.includes(t.id);
+    return `<button class="quick-tag-chip ${isOn?'selected':''}" onclick="toggleQuickTag('${t.id}')">#${escapeHtml(t.name)}</button>`;
+  }).join('');
+}
+
 /* ══════════════════════════════════
    리더 (iframe 기반)
    ══════════════════════════════════ */
@@ -1844,7 +1951,7 @@ function closeSheet(id) { $('#'+id).classList.remove('open'); }
 /* ── 초기 ── */
 function renderAll() {
   renderFavToggle();
-  renderCatBar(); renderTagBar(); renderChatTopics(); renderList();
+  renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList();
   const si = $('#searchInput');
   if (si) { si.value = STATE.filter.search || ''; $('#searchClear').classList.toggle('show', !!si.value); }
 }
