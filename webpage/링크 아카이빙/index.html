@@ -954,7 +954,7 @@ input, textarea { font-family: inherit; }
     </div>
 
     <!-- 노트 (하단 고정) -->
-    <div class="note-card collapsed" id="noteCard">
+    <div class="note-card" id="noteCard">
       <div class="note-header" onclick="toggleNote()">
         <div class="note-header-left">
           <span>📓</span><span>노트</span>
@@ -1335,7 +1335,7 @@ function handleSend() {
     categoryId: chosenCat, tagIds: [],
     isFavorite: false,
     itemType: isUrl ? 'link' : 'mywork',
-    note: { text: '', images: [], collapsed: true },
+    note: { text: '', images: [], collapsed: false },
     content: ''
   };
   STATE.links.unshift(link);
@@ -1428,7 +1428,7 @@ function saveNewWork() {
     categoryId: catId, tagIds: [],
     isFavorite: false,
     itemType: 'mywork',
-    note: { text: '', images: [], collapsed: true },
+    note: { text: '', images: [], collapsed: false },
     content: body
   };
   STATE.links.unshift(link);
@@ -1752,7 +1752,7 @@ function renderReader() {
   $('#readerMeta').innerHTML = `${catBadge}<span class="sep">·</span>${urlLink}${tagStr?`<span class="sep">·</span>${tagStr}`:''}${editBtn}`;
   // 노트
   $('#noteText').value = link.note?.text || '';
-  $('#noteCard').classList.toggle('collapsed', link.note?.collapsed !== false);
+  $('#noteCard').classList.toggle('collapsed', link.note?.collapsed === true);
   renderNoteImages();
   $('#noteText').oninput = () => { link.note.text = $('#noteText').value; markDirty(); };
   // 본문 영역: link.url이 있으면 preview card, 아니면 mywork 텍스트
@@ -1785,7 +1785,7 @@ function renderReaderActions() {
 /* 노트 토글 & 이미지 */
 function toggleNote() {
   const link = findLink(STATE.currentLinkId); if (!link) return;
-  if (!link.note) link.note = { text:'', images:[], collapsed: true };
+  if (!link.note) link.note = { text:'', images:[], collapsed: false };
   link.note.collapsed = !link.note.collapsed;
   $('#noteCard').classList.toggle('collapsed', link.note.collapsed);
   saveState();
