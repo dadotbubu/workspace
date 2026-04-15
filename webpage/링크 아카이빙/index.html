@@ -1082,11 +1082,13 @@ function syncToCloud() {
     const sb = getSupabase();
     if (!sb) return;
     try {
+      const now = new Date().toISOString();
       await sb.from(SYNC.table || 'archive_profiles').upsert({
         id: ACTIVE_USER,
         data: STATE,
-        updated_at: new Date().toISOString()
+        updated_at: now
       });
+      localStorage.setItem('archive_last_sync_' + ACTIVE_USER, new Date(now).getTime().toString());
       console.log('☁️ 클라우드 저장 완료');
     } catch (e) { console.log('sync error', e); }
   }, 1500);
@@ -1833,8 +1835,26 @@ renderUserTabs();
 renderAll();
 if ($('#searchInput')) $('#searchInput').addEventListener('input', handleSearchInput);
 
-// 저장할 때 클라우드에 자동 백업됨
-// 새로고침 버튼 누르면 클라우드에서 가져옴
+// 자동 동기화: 클라우드가 더 최신이면 가져오기
+(async function autoSync() {
+  const sb = getSupabase();
+  if (!sb) return;
+  try {
+    const { data } = await sb.from(SYNC.table || 'archive_profiles').select('data, updated_at').eq('id', ACTIVE_USER).single();
+    if (data?.data && data.data.categories?.length > 0) {
+      const cloudTime = new Date(data.updated_at).getTime();
+      const localTime = parseInt(localStorage.getItem('archive_last_sync_' + ACTIVE_USER) || '0');
+      if (cloudTime > localTime) {
+        STATE = data.data;
+        migrateFilter(STATE);
+        localStorage.setItem(STORAGE_PREFIX + ACTIVE_USER, JSON.stringify(STATE));
+        localStorage.setItem('archive_last_sync_' + ACTIVE_USER, cloudTime.toString());
+        renderAll();
+        showToast('☁️ 동기화됨');
+      }
+    }
+  } catch (e) { console.log('auto sync skip', e); }
+})();
 </script>
 </body>
 </html>
