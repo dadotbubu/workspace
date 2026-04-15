@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="The Archive">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂</text></svg>">
 <title>The Archive</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
@@ -782,7 +783,15 @@ input, textarea { font-family: inherit; }
   <button onclick="closeAddMenu(); openTagManage()">
     <span class="add-menu-icon">🏷</span><span>태그 관리</span>
   </button>
+  <hr style="border:none;border-top:1px solid var(--stone);margin:4px 0;">
+  <button onclick="closeAddMenu(); exportData()">
+    <span class="add-menu-icon">📤</span><span>데이터 내보내기</span>
+  </button>
+  <button onclick="closeAddMenu(); importData()">
+    <span class="add-menu-icon">📥</span><span>데이터 가져오기</span>
+  </button>
 </div>
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
 
 <!-- 카테고리 관리 시트 -->
 <div class="overlay" id="catManagePanel" onclick="if(event.target===this)closeSheet('catManagePanel')">
@@ -966,6 +975,10 @@ input, textarea { font-family: inherit; }
 <div class="toast" id="toast"></div>
 
 <script>
+const SUPABASE_URL = 'https://vihrydqudawrlwddffwa.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_CSIyDIv2pSnsO15M94NKyw_xoyniL5F';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const STORAGE_PREFIX = 'archive_app_v2_';
 const USER_KEY       = 'archive_app_active_user';
 
@@ -1009,6 +1022,27 @@ let ACTIVE_USER = localStorage.getItem(USER_KEY) || 'yuroi';
 let STATE = loadUserState(ACTIVE_USER);
 migrateFilter(STATE);
 
+// 클라우드 동기화 시작
+(async function initCloud() {
+  const cloudData = await loadFromCloud(ACTIVE_USER);
+  if (cloudData) {
+    // 클라우드 데이터가 더 최신이면 사용
+    const localTime = STATE.links[0]?.createdAt || 0;
+    const cloudTime = cloudData.links?.[0]?.createdAt || 0;
+    if (cloudTime >= localTime) {
+      STATE = cloudData;
+      migrateFilter(STATE);
+      localStorage.setItem(STORAGE_PREFIX + ACTIVE_USER, JSON.stringify(STATE));
+      renderAll();
+      showToast('☁️ 클라우드 동기화 완료');
+    }
+  }
+})();
+
+function renderAll() {
+  renderCatBar(); renderTagBar(); renderChatTopics(); renderList(); renderFavToggle();
+}
+
 function migrateFilter(state) {
   state.filter = Object.assign({ categoryId:'all', tagId:null, favoriteOnly:false, search:'' }, state.filter || {});
   if (typeof state.filter.favoriteOnly !== 'boolean') state.filter.favoriteOnly = false;
@@ -1047,7 +1081,80 @@ function loadUserState(user) {
   try { const raw = localStorage.getItem(STORAGE_PREFIX + user); if (raw) return JSON.parse(raw); } catch (e) {}
   return makeDefaultState(user);
 }
-function saveState() { try { localStorage.setItem(STORAGE_PREFIX + ACTIVE_USER, JSON.stringify(STATE)); } catch (e) {} }
+function saveState() {
+  try { localStorage.setItem(STORAGE_PREFIX + ACTIVE_USER, JSON.stringify(STATE)); } catch (e) {}
+  syncToCloud();
+}
+let _syncTimer = null;
+function syncToCloud() {
+  if (_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    try {
+      await supabase.from('archive_data').upsert({
+        id: ACTIVE_USER,
+        user_id: ACTIVE_USER,
+        data: STATE,
+        updated_at: new Date().toISOString()
+      });
+    } catch (e) { console.log('sync error', e); }
+  }, 1000);
+}
+async function loadFromCloud(user) {
+  try {
+    const { data } = await supabase.from('archive_data').select('data').eq('id', user).single();
+    if (data?.data) return data.data;
+  } catch (e) {}
+  return null;
+}
+
+function exportData() {
+  const data = JSON.stringify(STATE, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `archive_${ACTIVE_USER}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 내보내기 완료');
+}
+function importData() { $('#importFile').click(); }
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      let addedLinks = 0, addedCats = 0, addedTags = 0;
+      // 카테고리 병합
+      (imported.categories || []).forEach(c => {
+        if (!STATE.categories.find(x => x.id === c.id || x.name === c.name)) {
+          STATE.categories.push(c); addedCats++;
+        }
+      });
+      // 태그 병합
+      (imported.tags || []).forEach(t => {
+        if (!STATE.tags.find(x => x.id === t.id)) {
+          STATE.tags.push(t); addedTags++;
+        }
+      });
+      // 링크 병합
+      (imported.links || []).forEach(l => {
+        if (!STATE.links.find(x => x.id === l.id || x.url === l.url)) {
+          STATE.links.push(l); addedLinks++;
+        }
+      });
+      saveState();
+      renderCatBar(); renderTagBar(); renderChatTopics(); renderList();
+      showToast(`📥 가져오기 완료 (링크 ${addedLinks}, 카테고리 ${addedCats}, 태그 ${addedTags})`);
+    } catch (err) {
+      showToast('❌ 파일 형식 오류');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
 
 function uid(prefix) { return prefix + '_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-3); }
 function safeHostname(url) { try { return new URL(url.startsWith('http') ? url : 'https://'+url).hostname.replace(/^www\./,''); } catch { return url; } }
@@ -1082,7 +1189,7 @@ function showToast(msg) {
 }
 
 /* ── 사용자 전환 ── */
-function switchUser(u) {
+async function switchUser(u) {
   if (u === ACTIVE_USER) return;
   saveState();
   if ($('#reader').classList.contains('open')) closeReaderForce();
@@ -1094,6 +1201,13 @@ function switchUser(u) {
   try { localStorage.setItem(USER_KEY, u); } catch(e){}
   STATE = loadUserState(u);
   migrateFilter(STATE);
+  // 클라우드에서 로드
+  const cloudData = await loadFromCloud(u);
+  if (cloudData) {
+    STATE = cloudData;
+    migrateFilter(STATE);
+    localStorage.setItem(STORAGE_PREFIX + u, JSON.stringify(STATE));
+  }
   const si = $('#searchInput');
   if (si) { si.value = STATE.filter.search || ''; $('#searchClear').classList.toggle('show', !!si.value); }
   renderUserTabs();
