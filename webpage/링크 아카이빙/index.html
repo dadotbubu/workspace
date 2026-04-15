@@ -396,12 +396,15 @@ input, textarea { font-family: inherit; }
   font-size: 12px; font-weight: 500; color: var(--forest);
 }
 .tag-edit-chip.common { border-style: solid; }
-.tag-edit-chip-del, .tag-edit-chip-move {
+.tag-edit-chip-del {
   background: none; border: none; cursor: pointer;
   color: var(--clay); font-size: 12px; padding: 0 2px; line-height: 1;
 }
 .tag-edit-chip-del:hover { color: var(--terra); }
-.tag-edit-chip-move:hover { color: var(--forest); }
+.tag-edit-chip[draggable="true"] { cursor: grab; }
+.tag-edit-chip[draggable="true"]:active { cursor: grabbing; }
+.tag-edit-chip.dragging { opacity: 0.4; }
+.tag-edit-chip.drag-over { outline: 2px dashed var(--sage); outline-offset: 2px; }
 .tag-empty { font-size: 12px; color: var(--dim); font-style: italic; padding: 8px 0; }
 
 /* 폼 필드 (시트) */
@@ -1456,11 +1459,11 @@ function renderTagManage() {
     ? STATE.tags.filter(t => t.scope === 'common')
     : STATE.tags.filter(t => t.scope === 'category' && t.categoryId === STATE.ui.tagScopeCat);
   if (tags.length === 0) list.innerHTML = `<div class="tag-empty">아직 없어요. 아래에서 추가하세요.</div>`;
-  else list.innerHTML = tags.map((t, i) => `
-    <span class="tag-edit-chip ${t.scope==='common'?'common':''}">
-      <button class="tag-edit-chip-move" onclick="moveTag('${t.id}',-1)" title="왼쪽" ${i===0?'disabled':''}>◀</button>
+  else list.innerHTML = tags.map(t => `
+    <span class="tag-edit-chip ${t.scope==='common'?'common':''}" draggable="true" data-id="${t.id}"
+      ondragstart="tagDragStart(event)" ondragend="tagDragEnd(event)"
+      ondragover="tagDragOver(event)" ondrop="tagDrop(event)">
       #${escapeHtml(t.name)}
-      <button class="tag-edit-chip-move" onclick="moveTag('${t.id}',1)" title="오른쪽" ${i===tags.length-1?'disabled':''}>▶</button>
       <button class="tag-edit-chip-del" onclick="deleteTag('${t.id}')" title="삭제">×</button>
     </span>
   `).join('');
@@ -1487,20 +1490,31 @@ function deleteTag(id) {
   if (STATE.filter.tagId === id) STATE.filter.tagId = null;
   saveState(); renderTagManage(); renderTagBar(); renderList();
 }
-function moveTag(id, dir) {
-  const t = findTag(id); if (!t) return;
-  const isCommon = STATE.ui.tagScope === 'common';
-  const tags = isCommon
-    ? STATE.tags.filter(x => x.scope === 'common')
-    : STATE.tags.filter(x => x.scope === 'category' && x.categoryId === STATE.ui.tagScopeCat);
-  const idx = tags.findIndex(x => x.id === id);
-  if (idx < 0) return;
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= tags.length) return;
-  const globalIdx = STATE.tags.indexOf(t);
-  const swapTag = tags[newIdx];
-  const swapGlobalIdx = STATE.tags.indexOf(swapTag);
-  [STATE.tags[globalIdx], STATE.tags[swapGlobalIdx]] = [STATE.tags[swapGlobalIdx], STATE.tags[globalIdx]];
+let _dragTagId = null;
+function tagDragStart(e) {
+  _dragTagId = e.target.dataset.id;
+  e.target.classList.add('dragging');
+}
+function tagDragEnd(e) {
+  e.target.classList.remove('dragging');
+  $$('.tag-edit-chip').forEach(el => el.classList.remove('drag-over'));
+}
+function tagDragOver(e) {
+  e.preventDefault();
+  const chip = e.target.closest('.tag-edit-chip');
+  if (chip && chip.dataset.id !== _dragTagId) chip.classList.add('drag-over');
+}
+function tagDrop(e) {
+  e.preventDefault();
+  const chip = e.target.closest('.tag-edit-chip');
+  if (!chip) return;
+  const targetId = chip.dataset.id;
+  if (targetId === _dragTagId) return;
+  const fromIdx = STATE.tags.findIndex(t => t.id === _dragTagId);
+  const toIdx = STATE.tags.findIndex(t => t.id === targetId);
+  if (fromIdx < 0 || toIdx < 0) return;
+  const [moved] = STATE.tags.splice(fromIdx, 1);
+  STATE.tags.splice(toIdx, 0, moved);
   saveState(); renderTagManage(); renderTagBar();
 }
 
