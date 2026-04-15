@@ -1337,7 +1337,7 @@ function renderList() {
 }
 
 /* ── 하단 카테고리 토글 ── */
-function renderChatTopics(); renderChatTags() {
+function renderChatTopics() {
   const cur = STATE.ui.chatCat;
   let html = `<button class="chat-topic auto ${cur==='auto'?'selected':''}" onclick="setChatCat('auto')">자동 분류</button>`;
   STATE.categories.forEach(c => {
@@ -1348,7 +1348,7 @@ function renderChatTopics(); renderChatTags() {
 function setChatCat(id) {
   STATE.ui.chatCat = id;
   STATE.ui.chatTags = []; // 카테고리 변경 시 태그 초기화
-  saveState(); renderChatTopics(); renderChatTags(); renderChatTags();
+  saveState(); renderChatTopics(); renderChatTags();
 }
 
 /* ── 하단 태그 토글 ── */
