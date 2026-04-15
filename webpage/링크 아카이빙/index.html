@@ -1103,11 +1103,23 @@ async function syncFromCloud() {
     const { data, error } = await sb.from(SYNC.table || 'archive_profiles').select('data, updated_at').eq('id', ACTIVE_USER).single();
     if (error) throw error;
     if (data?.data) {
-      STATE = data.data;
-      migrateFilter(STATE);
-      localStorage.setItem(STORAGE_PREFIX + ACTIVE_USER, JSON.stringify(STATE));
+      const cloud = data.data;
+      let added = { cats: 0, tags: 0, links: 0 };
+      // 카테고리 병합 (없는 것만 추가)
+      (cloud.categories || []).forEach(c => {
+        if (!STATE.categories.find(x => x.id === c.id)) { STATE.categories.push(c); added.cats++; }
+      });
+      // 태그 병합
+      (cloud.tags || []).forEach(t => {
+        if (!STATE.tags.find(x => x.id === t.id)) { STATE.tags.push(t); added.tags++; }
+      });
+      // 링크 병합
+      (cloud.links || []).forEach(l => {
+        if (!STATE.links.find(x => x.id === l.id)) { STATE.links.push(l); added.links++; }
+      });
+      saveState();
       renderCatBar(); renderTagBar(); renderChatTopics(); renderList(); renderFavToggle();
-      showToast('☁️ 동기화 완료!');
+      showToast(`☁️ +${added.cats}카테고리, +${added.tags}태그, +${added.links}링크`);
     } else {
       showToast('☁️ 클라우드 데이터 없음');
     }
@@ -1835,22 +1847,28 @@ renderUserTabs();
 renderAll();
 if ($('#searchInput')) $('#searchInput').addEventListener('input', handleSearchInput);
 
-// 자동 동기화: 클라우드가 더 최신이면 가져오기
+// 자동 동기화: 병합 방식 (기존 유지 + 새 것만 추가)
 (async function autoSync() {
   const sb = getSupabase();
   if (!sb) return;
   try {
     const { data } = await sb.from(SYNC.table || 'archive_profiles').select('data, updated_at').eq('id', ACTIVE_USER).single();
-    if (data?.data && data.data.categories?.length > 0) {
-      const cloudTime = new Date(data.updated_at).getTime();
-      const localTime = parseInt(localStorage.getItem('archive_last_sync_' + ACTIVE_USER) || '0');
-      if (cloudTime > localTime) {
-        STATE = data.data;
-        migrateFilter(STATE);
-        localStorage.setItem(STORAGE_PREFIX + ACTIVE_USER, JSON.stringify(STATE));
-        localStorage.setItem('archive_last_sync_' + ACTIVE_USER, cloudTime.toString());
+    if (data?.data) {
+      const cloud = data.data;
+      let added = 0;
+      (cloud.categories || []).forEach(c => {
+        if (!STATE.categories.find(x => x.id === c.id)) { STATE.categories.push(c); added++; }
+      });
+      (cloud.tags || []).forEach(t => {
+        if (!STATE.tags.find(x => x.id === t.id)) { STATE.tags.push(t); added++; }
+      });
+      (cloud.links || []).forEach(l => {
+        if (!STATE.links.find(x => x.id === l.id)) { STATE.links.push(l); added++; }
+      });
+      if (added > 0) {
+        saveState();
         renderAll();
-        showToast('☁️ 동기화됨');
+        showToast('☁️ +' + added + '개 동기화됨');
       }
     }
   } catch (e) { console.log('auto sync skip', e); }
