@@ -1315,6 +1315,9 @@ let _quickSaveLinkId = null;
 let _quickSaveBlocked = false;
 
 /* ── 링크 메타(제목) 자동 가져오기 (Microlink 무료 API) ── */
+// TODO: 노션 링크 제목 가져오기 개선 필요 (현재 CORS로 실패)
+// - 옵션1: jsonlink.io API 시도
+// - 옵션2: Cloudflare Workers 프록시 구축
 async function fetchLinkMeta(url) {
   try {
     const api = `https://api.microlink.io/?url=${encodeURIComponent(url)}`;
