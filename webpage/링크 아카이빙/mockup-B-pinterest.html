@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>링크 아카이브 — 목업 B (핀터레스트)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif; background: #0f0f0f; color: #f0f0f0; min-height: 100vh; }
+
+  /* TOP NAV */
+  nav { background: #0f0f0f; border-bottom: 1px solid #222; padding: 0 20px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 18px; font-weight: 800; letter-spacing: -1px; }
+  .logo em { color: #c8f135; font-style: normal; }
+  .add-btn { background: #c8f135; color: #0f0f0f; border: none; border-radius: 20px; padding: 9px 20px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+  /* TOPICS */
+  .topic-scroll { overflow-x: auto; padding: 16px 20px; display: flex; gap: 8px; scrollbar-width: none; }
+  .topic-scroll::-webkit-scrollbar { display: none; }
+  .chip { border: 1.5px solid #333; background: transparent; border-radius: 20px; padding: 7px 16px; font-size: 13px; font-weight: 500; cursor: pointer; color: #888; white-space: nowrap; transition: all 0.15s; }
+  .chip:hover { border-color: #c8f135; color: #c8f135; }
+  .chip.active { background: #c8f135; border-color: #c8f135; color: #0f0f0f; font-weight: 700; }
+  .chip.add { border-style: dashed; }
+
+  /* MASONRY GRID */
+  .grid-container { padding: 4px 16px 100px; columns: 2; column-gap: 10px; }
+  @media (min-width: 700px) { .grid-container { columns: 3; } }
+  @media (min-width: 1000px) { .grid-container { columns: 4; } }
+
+  .card { break-inside: avoid; background: #1a1a1a; border-radius: 16px; margin-bottom: 10px; overflow: hidden; cursor: pointer; transition: transform 0.15s; text-decoration: none; color: inherit; display: block; }
+  .card:hover { transform: translateY(-2px); }
+  .card-color-bar { height: 5px; }
+  .card-inner { padding: 14px; }
+  .card-topic-tag { display: inline-block; background: #222; border-radius: 6px; padding: 3px 8px; font-size: 10px; font-weight: 600; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-title { font-size: 14px; font-weight: 700; line-height: 1.45; margin-bottom: 8px; color: #f0f0f0; }
+  .card-summary { font-size: 12px; color: #777; line-height: 1.6; }
+  .card-footer { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+  .card-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .card-url { font-size: 11px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-no-summary { font-size: 11px; color: #444; font-style: italic; }
+
+  /* COLORS per topic */
+  .color-insta { background: linear-gradient(90deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+  .color-brand { background: #5b5bd6; }
+  .color-plan { background: #0ea5e9; }
+  .color-life { background: #22c55e; }
+  .color-trend { background: #c8f135; }
+  .color-default { background: #444; }
+
+  /* MOBILE BOTTOM INPUT */
+  .mobile-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-top: 1px solid #222; padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 200; }
+  .mobile-bar-inner { display: flex; gap: 8px; background: #111; border: 1.5px solid #333; border-radius: 24px; padding: 10px 16px; align-items: center; }
+  .mobile-bar-inner input { flex: 1; background: transparent; border: none; color: #f0f0f0; font-size: 15px; outline: none; }
+  .mobile-bar-inner input::placeholder { color: #555; }
+  .mobile-bar-inner button { background: #c8f135; border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; color: #0f0f0f; font-size: 18px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; z-index: 300; }
+  .modal { background: #1a1a1a; border-radius: 24px 24px 0 0; padding: 24px; width: 100%; }
+  .modal-handle { width: 40px; height: 4px; background: #333; border-radius: 2px; margin: 0 auto 20px; }
+  .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+  .modal label { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+  .modal input, .modal select, .modal textarea { width: 100%; background: #111; border: 1.5px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; font-size: 14px; color: #f0f0f0; margin-bottom: 14px; outline: none; font-family: inherit; }
+  .modal input:focus, .modal select:focus { border-color: #c8f135; }
+  .modal select option { background: #1a1a1a; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-actions button { flex: 1; padding: 15px; border-radius: 14px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn-cancel { background: #222; color: #888; }
+  .btn-save { background: #c8f135; color: #0f0f0f; }
+
+  @media (min-width: 700px) {
+    .mobile-bar { display: none; }
+    .add-btn { display: flex; }
+  }
+  @media (max-width: 699px) {
+    .add-btn { display: none; }
+    body { padding-bottom: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">link<em>·</em>archive</div>
+  <button class="add-btn" onclick="openModal()">+ 추가</button>
+</nav>
+
+<div class="topic-scroll">
+  <div class="chip active">전체</div>
+  <div class="chip">인스타그램</div>
+  <div class="chip">브랜딩</div>
+  <div class="chip">기획</div>
+  <div class="chip">라이프스타일</div>
+  <div class="chip">트렌드</div>
+  <div class="chip add">+ 주제 추가</div>
+</div>
+
+<div class="grid-container">
+
+  <a class="card" href="#">
+    <div class="card-color-bar color-insta"></div>
+    <div class="card-inner">
+      <span class="card-topic-tag">인스타그램</span>
+      <div class="card-title">인스타그램 알고리즘 완벽 분석 2025 — 릴스 vs 캐러셀</div>
+      <div class="card-summary">저장·공유·댓글 가중치 변화를 심층 분석. 도달률 3배 높이는 실전 팁 포함.</div>
+      <div class="card-footer">
+        <div class="card-dot" style="background:#f09433"></div>
+        <div class="card-url">socialmediatoday.com</div>
+      </div>
+    </div>
+  </a>
+
+  <a class="card" href="#">
+    <div class="card-color-bar color-life"></div>
+    <div class="card-inner">
+      <span class="card-topic-tag">라이프스타일</span>
+      <div class="card-title">미니멀 라이프 30일 챌린지</div>
+      <div class="card-no-summary">— 요약 없음</div>
+      <div class="card-footer">
+        <div class="card-dot" style="background:#22c55e"></div>
+        <div class="card-url">lifehacker.com</div>
+      </div>
+    </div>
+  </a>
+
+  <a class="card" href="#">
+    <div class="card-color-bar color-brand"></div>
+    <div class="card-inner">
+      <span class="card-topic-tag">브랜딩</span>
+      <div class="card-title">감각적인 브랜드 아이덴티티 만들기</div>
+      <div class="card-summary">색상·타이포·로고 일관성이 왜 중요한지, 소규모 브랜드도 당장 적용 가능한 실전 팁.</div>
+      <div class="card-footer">
+        <div class="card-dot" style="background:#5b5bd6"></div>
+        <div class="card-url">brandingmag.co</div>
+      </div>
+    </div>
+  </a>
+
+  <a class="card" href="#">
+    <div class="card-color-bar color-trend"></div>
+    <div class="card-inner">
+      <span class="card-topic-tag">트렌드</span>
+      <div class="card-title">2025 마이크로 인플루언서 리포트</div>
+      <div class="card-summary">10K 이하 계정이 대형 인플루언서보다 참여율 3배 높다. 진정성의 시대.</div>
+      <div class="card-footer">
+        <div class="card-dot" style="background:#c8f135"></div>
+        <div class="card-url">reportmedia.kr</div>
+      </div>
+    </div>
+  </a>
+
+  <a class="card" href="#">
+    <div class="card-color-bar color-plan"></div>
+    <div class="card-inner">
+      <span class="card-topic-tag">기획</span>
+      <div class="card-title">콘텐츠 캘린더 템플릿 — Notion 무료</div>
+      <div class="card-summary">월별·주별 계획을 한눈에. 인스타·유튜브·블로그 채널 통합 관리 가능한 Notion 템플릿.</div>
+      <div class="card-footer">
+        <div class="card-dot" style="background:#0ea5e9"></div>
+        <div class="card-url">notion.so/templates</div>
+      </div>
+    </div>
+  </a>
+
+  <a class="card" href="#">
+    <div class="card-color-bar color-insta"></div>
+    <div class="card-inner">
+      <span class="card-topic-tag">인스타그램</span>
+      <div class="card-title">릴스 후킹 문장 100가지</div>
+      <div class="card-no-summary">— 요약 없음</div>
+      <div class="card-footer">
+        <div class="card-dot" style="background:#dc2743"></div>
+        <div class="card-url">creatoriq.com</div>
+      </div>
+    </div>
+  </a>
+
+</div>
+
+<!-- Mobile bottom input -->
+<div class="mobile-bar">
+  <div class="mobile-bar-inner">
+    <input type="url" placeholder="링크 붙여넣기..." id="linkInput" />
+    <button onclick="openModal()">↑</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>링크 추가</h3>
+    <label>URL</label>
+    <input type="url" placeholder="https://..." id="urlInput" />
+    <label>주제</label>
+    <select>
+      <option>인스타그램</option>
+      <option>브랜딩</option>
+      <option>기획</option>
+      <option>라이프스타일</option>
+      <option>트렌드</option>
+    </select>
+    <label>제목 <span style="color:#555;font-weight:400;text-transform:none">(자동 입력)</span></label>
+    <input type="text" placeholder="제목이 자동으로 채워져요" />
+    <label>메모 <span style="color:#555;font-weight:400;text-transform:none">(선택)</span></label>
+    <textarea rows="3" placeholder="간단한 메모나 요약을 남겨보세요"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal() {
+    const input = document.getElementById('linkInput');
+    if (input && input.value) {
+      document.getElementById('urlInput').value = input.value;
+    }
+    document.getElementById('modal').style.display = 'flex';
+  }
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+  document.getElementById('linkInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') openModal();
+  });
+</script>
+
+</body>
+</html>
