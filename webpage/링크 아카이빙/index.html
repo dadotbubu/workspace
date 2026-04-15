@@ -361,11 +361,12 @@ input, textarea { font-family: inherit; }
   border: none; background: transparent; outline: none;
 }
 .cat-edit-name:focus { background: var(--muted); padding: 4px 8px; border-radius: 6px; }
-.cat-edit-count { font-size: 12px; color: var(--dim); }
+.cat-edit-count { font-size: 12px; color: var(--dim); white-space: nowrap; flex-shrink: 0; }
 .cat-edit-del, .cat-edit-tags {
   background: none; border: none; cursor: pointer;
   font-size: 13px; padding: 4px 6px;
   color: var(--clay); transition: color 0.2s;
+  white-space: nowrap; flex-shrink: 0;
 }
 .cat-edit-del:hover { color: var(--terra); }
 .cat-edit-tags:hover { color: var(--sage); }
@@ -380,6 +381,7 @@ input, textarea { font-family: inherit; }
   background: var(--forest); color: #fff; border: none;
   border-radius: 12px; padding: 11px 20px;
   font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  white-space: nowrap;
 }
 .cat-add-btn:hover, .tag-add-btn:hover { background: var(--terra); }
 
