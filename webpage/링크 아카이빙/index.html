@@ -1507,16 +1507,20 @@ function deleteTag(id) {
 }
 let _dragTagId = null;
 function tagDragStart(e) {
-  _dragTagId = e.target.dataset.id;
-  e.target.classList.add('dragging');
+  const chip = e.target.closest('.tag-edit-chip');
+  if (!chip) return;
+  _dragTagId = chip.dataset.id;
+  chip.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
 }
 function tagDragEnd(e) {
-  e.target.classList.remove('dragging');
-  $$('.tag-edit-chip').forEach(el => el.classList.remove('drag-over'));
+  $$('.tag-edit-chip').forEach(el => el.classList.remove('dragging', 'drag-over'));
 }
 function tagDragOver(e) {
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
   const chip = e.target.closest('.tag-edit-chip');
+  $$('.tag-edit-chip').forEach(el => el.classList.remove('drag-over'));
   if (chip && chip.dataset.id !== _dragTagId) chip.classList.add('drag-over');
 }
 function tagDrop(e) {
@@ -1524,13 +1528,14 @@ function tagDrop(e) {
   const chip = e.target.closest('.tag-edit-chip');
   if (!chip) return;
   const targetId = chip.dataset.id;
-  if (targetId === _dragTagId) return;
+  if (!targetId || targetId === _dragTagId) return;
   const fromIdx = STATE.tags.findIndex(t => t.id === _dragTagId);
   const toIdx = STATE.tags.findIndex(t => t.id === targetId);
   if (fromIdx < 0 || toIdx < 0) return;
   const [moved] = STATE.tags.splice(fromIdx, 1);
   STATE.tags.splice(toIdx, 0, moved);
   saveState(); renderTagManage(); renderTagBar();
+  showToast('✓ 순서 변경됨');
 }
 
 /* ── 링크 정보 편집 ── */
