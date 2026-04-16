@@ -18,6 +18,9 @@ window.__ARCHIVE_SYNC__ = {
   key: 'sb_publishable_CSIyDIv2pSnsO15M94NKyw_xoyniL5F',
   table: 'archive_profiles',
 };
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
