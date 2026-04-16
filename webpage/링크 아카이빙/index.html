@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="The Archive">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>The Archive</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -1192,6 +1194,9 @@ function relativeDateLabel(ts) {
   if (diffDays < 30) return Math.floor(diffDays/7) + '주 전';
   return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
 }
+// TODO: 개선 - 도메인 기반 → 키워드 기반 자동 분류로 변경
+// - 현재: URL에 도메인 포함 여부로 카테고리 분류
+// - 개선: 제목/URL 키워드 분석으로 카테고리+태그 자동 분류
 function autoClassify(url) {
   const lower = url.toLowerCase();
   for (const [catId, kws] of Object.entries(AUTO_KEYWORDS)) {
