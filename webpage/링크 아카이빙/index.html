@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>The Archive</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
 window.__ARCHIVE_SYNC__ = {
   url: 'https://vihrydqudawrlwddffwa.supabase.co',
@@ -176,6 +177,25 @@ input, textarea { font-family: inherit; }
 .tag-chip:hover { border-color: var(--terra); color: var(--terra); }
 .tag-chip.active { background: var(--terra); border-color: var(--terra); color: #fff; }
 
+/* ── 사이트 유형 바 ── */
+.site-type-bar {
+  display: flex; align-items: center; gap: 6px;
+  overflow-x: auto; scrollbar-width: none;
+  padding: 6px 20px;
+  background: var(--bg); border-bottom: 1px solid var(--stone);
+}
+.site-type-bar::-webkit-scrollbar { display: none; }
+.site-type-bar.hidden { display: none; }
+.site-type-chip {
+  flex-shrink: 0; font-size: 10px; font-weight: 500;
+  padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--stone);
+  background: var(--card-bg); color: var(--dim);
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.site-type-chip:hover { border-color: var(--sage); color: var(--sage); }
+.site-type-chip.active { background: var(--sage); border-color: var(--sage); color: #fff; }
+
 /* ── 리스트 ── */
 .list-wrap { max-width: 680px; margin: 0 auto; padding: 16px 16px 0; }
 .date-group-label {
@@ -228,6 +248,15 @@ input, textarea { font-family: inherit; }
 .link-domain {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 120px;
+}
+.link-site-type {
+  color: var(--sage); font-weight: 500; font-size: 11px;
+}
+.owner-badge {
+  margin-right: 4px; font-size: 12px;
+}
+.link-row.other-owner {
+  opacity: 0.7;
 }
 .link-icons { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .link-icons .icon-btn {
@@ -402,6 +431,13 @@ input, textarea { font-family: inherit; }
 }
 .cat-edit-del:hover { color: var(--terra); }
 .cat-edit-tags:hover { color: var(--sage); }
+.cat-drag-handle {
+  cursor: grab; padding: 10px 8px; color: var(--clay);
+  font-size: 16px; flex-shrink: 0; touch-action: none;
+}
+.cat-drag-handle:active { cursor: grabbing; color: var(--forest); }
+.cat-edit-row.sortable-ghost { opacity: 0.4; }
+.cat-edit-row.sortable-chosen { background: var(--muted); }
 .cat-add-row { display: flex; gap: 8px; }
 .cat-add-input, .tag-add-input {
   flex: 1; background: var(--muted); border: 1.5px solid transparent;
@@ -800,6 +836,7 @@ input, textarea { font-family: inherit; }
 
 <div class="cat-bar" id="catBar"></div>
 <div class="tag-bar hidden" id="tagBar"></div>
+<div class="site-type-bar hidden" id="siteTypeBar"></div>
 <div class="list-wrap" id="listWrap"></div>
 
 <div class="chat-bar">
@@ -1055,14 +1092,19 @@ const DAROI_CATEGORIES = [
   { id: 'c_money', name: '재테크', color: '#A5D4AC', builtin: true },
   { id: 'c_etc',   name: '기타',   color: '#D0D0D0', builtin: true, isFallback: true },
 ];
-const AUTO_KEYWORDS = {
-  c_insta:   ['instagram','insta','reel','reels','릴스','인스타','threads'],
-  c_plan:    ['plan','planning','기획','전략','strategy'],
-  c_content: ['content','블로그','blog','tistory','brunch','velog','post'],
-  c_notion:  ['notion.so','notion.site','노션'],
-  c_ai:      ['chatgpt','claude','openai','anthropic','gpt','gemini','midjourney','runway'],
-  c_git:     ['github.com','gitlab','git.','code'],
-  c_site:    ['figma','framer','webflow','vercel','netlify','canva','dribbble'],
+// siteType 자동 감지 규칙 (도메인 기반)
+const SITE_TYPE_RULES = {
+  notion:  { label: '노션',   domains: ['notion.so', 'notion.site'] },
+  blog:    { label: '블로그', domains: ['tistory.com', 'brunch.co.kr', 'velog.io', 'medium.com', 'substack.com', 'blog.naver.com', 'wordpress.com'] },
+  social:  { label: '소셜',   domains: ['instagram.com', 'threads.net', 'twitter.com', 'x.com', 'facebook.com', 'linkedin.com'] },
+  video:   { label: '동영상', domains: ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.tv', 'tiktok.com'] },
+  code:    { label: '코드',   domains: ['github.com', 'gitlab.com', 'gist.github.com', 'codepen.io', 'codesandbox.io', 'replit.com'] },
+  design:  { label: '디자인', domains: ['figma.com', 'framer.com', 'canva.com', 'dribbble.com', 'behance.net', 'pinterest.com'] },
+  docs:    { label: '문서',   domains: ['docs.google.com', 'developer.mozilla.org', 'readthedocs.io', 'gitbook.io'] },
+  shop:    { label: '쇼핑',   domains: ['coupang.com', 'gmarket.co.kr', 'smartstore.naver.com', 'amazon.com', '11st.co.kr'] },
+  news:    { label: '뉴스',   domains: ['news.naver.com', 'news.google.com', 'bbc.com', 'techcrunch.com', 'theverge.com'] },
+  ai:      { label: 'AI',     domains: ['chat.openai.com', 'openai.com', 'claude.ai', 'anthropic.com', 'gemini.google.com', 'huggingface.co'] },
+  other:   { label: '사이트', domains: [] },
 };
 
 let ACTIVE_USER = localStorage.getItem(USER_KEY) || 'yuroi';
@@ -1070,10 +1112,17 @@ let STATE = loadUserState(ACTIVE_USER);
 migrateFilter(STATE);
 
 function migrateFilter(state) {
-  state.filter = Object.assign({ categoryId:'all', tagId:null, favoriteOnly:false, search:'' }, state.filter || {});
+  state.filter = Object.assign({ categoryId:'all', siteType:'all', tagId:null, favoriteOnly:false, search:'' }, state.filter || {});
   if (typeof state.filter.favoriteOnly !== 'boolean') state.filter.favoriteOnly = false;
   if (typeof state.filter.search !== 'string') state.filter.search = '';
+  if (!state.filter.siteType) state.filter.siteType = 'all';
   state.ui = state.ui || { chatCat: 'auto', chatTags: [], tagScope: 'common', tagScopeCat: null };
+  // 기존 링크에 siteType 마이그레이션
+  (state.links || []).forEach(link => {
+    if (link.url && !link.siteType) {
+      link.siteType = detectSiteType(link.url);
+    }
+  });
 }
 
 function makeDefaultState(user) {
@@ -1148,11 +1197,14 @@ async function syncFromCloud() {
   const btn = $('#syncBtn');
   if (btn) btn.style.animation = 'spin 1s linear infinite';
   try {
-    const { data, error } = await sb.from(SYNC.table || 'archive_profiles').select('data, updated_at').eq('id', ACTIVE_USER).single();
+    // 유로이 + 다로이 둘 다 가져오기
+    const { data, error } = await sb.from(SYNC.table || 'archive_profiles').select('id, data, updated_at');
     if (error) throw error;
-    if (data?.data) {
-      const cloud = data.data;
-      let added = { cats: 0, tags: 0, links: 0 };
+    let added = { cats: 0, tags: 0, links: 0 };
+    (data || []).forEach(row => {
+      const cloud = row.data;
+      const owner = row.id; // 'yuroi' 또는 'daroi'
+      if (!cloud) return;
       // 카테고리 병합 (없는 것만 추가)
       (cloud.categories || []).forEach(c => {
         if (!STATE.categories.find(x => x.id === c.id)) { STATE.categories.push(c); added.cats++; }
@@ -1161,15 +1213,21 @@ async function syncFromCloud() {
       (cloud.tags || []).forEach(t => {
         if (!STATE.tags.find(x => x.id === t.id)) { STATE.tags.push(t); added.tags++; }
       });
-      // 링크 병합
+      // 링크 병합 (owner 표시 추가)
       (cloud.links || []).forEach(l => {
-        if (!STATE.links.find(x => x.id === l.id)) { STATE.links.push(l); added.links++; }
+        if (!STATE.links.find(x => x.id === l.id)) {
+          l.owner = owner; // 누구 링크인지 표시
+          STATE.links.push(l);
+          added.links++;
+        }
       });
+    });
+    if (added.links > 0 || added.cats > 0 || added.tags > 0) {
       saveState();
       renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList(); renderFavToggle();
       showToast(`☁️ +${added.cats}카테고리, +${added.tags}태그, +${added.links}링크`);
     } else {
-      showToast('☁️ 클라우드 데이터 없음');
+      showToast('☁️ 이미 최신 상태');
     }
   } catch (e) {
     console.log('sync error', e);
@@ -1197,15 +1255,21 @@ function relativeDateLabel(ts) {
   if (diffDays < 30) return Math.floor(diffDays/7) + '주 전';
   return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
 }
-// TODO: 개선 - 도메인 기반 → 키워드 기반 자동 분류로 변경
-// - 현재: URL에 도메인 포함 여부로 카테고리 분류
-// - 개선: 제목/URL 키워드 분석으로 카테고리+태그 자동 분류
-function autoClassify(url) {
-  const lower = url.toLowerCase();
-  for (const [catId, kws] of Object.entries(AUTO_KEYWORDS)) {
-    if (kws.some(k => lower.includes(k))) return catId;
-  }
-  return fallbackCatId();
+// siteType 자동 감지 (URL 도메인 기반)
+function detectSiteType(url) {
+  if (!url) return 'other';
+  try {
+    const hostname = new URL(url.startsWith('http') ? url : 'https://' + url).hostname.toLowerCase();
+    for (const [type, rule] of Object.entries(SITE_TYPE_RULES)) {
+      if (rule.domains.some(d => hostname.includes(d) || hostname.endsWith('.' + d.split('.')[0]))) {
+        return type;
+      }
+    }
+  } catch (e) {}
+  return 'other';
+}
+function getSiteTypeInfo(type) {
+  return SITE_TYPE_RULES[type] || SITE_TYPE_RULES.other;
 }
 function showToast(msg) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
@@ -1291,6 +1355,25 @@ function renderTagBar() {
   });
   bar.innerHTML = html;
 }
+function renderSiteTypeBar() {
+  const bar = $('#siteTypeBar');
+  // 현재 링크에서 사용 중인 siteType만 표시
+  const usedTypes = new Set(STATE.links.map(l => l.siteType).filter(Boolean));
+  if (usedTypes.size <= 1) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  const f = STATE.filter.siteType || 'all';
+  let html = `<button class="site-type-chip ${f==='all'?'active':''}" onclick="setSiteTypeFilter('all')">전체</button>`;
+  Object.entries(SITE_TYPE_RULES).forEach(([type, rule]) => {
+    if (type !== 'other' && usedTypes.has(type)) {
+      html += `<button class="site-type-chip ${f===type?'active':''}" onclick="setSiteTypeFilter('${type}')">${rule.label}</button>`;
+    }
+  });
+  bar.innerHTML = html;
+}
+function setSiteTypeFilter(type) {
+  STATE.filter.siteType = type;
+  saveState(); renderSiteTypeBar(); renderList();
+}
 
 /* ── 리스트 렌더 ── */
 function filterLinks() {
@@ -1298,6 +1381,7 @@ function filterLinks() {
   const q = (f.search || '').trim().toLowerCase();
   return STATE.links.filter(l => {
     if (f.categoryId !== 'all' && l.categoryId !== f.categoryId) return false;
+    if (f.siteType && f.siteType !== 'all' && l.siteType !== f.siteType) return false;
     if (f.tagId && !l.tagIds.includes(f.tagId)) return false;
     if (f.favoriteOnly && !l.isFavorite) return false;
     if (q) {
@@ -1308,6 +1392,7 @@ function filterLinks() {
   }).sort((a,b) => b.createdAt - a.createdAt);
 }
 function renderList() {
+  renderSiteTypeBar(); // siteType 필터 바 업데이트
   const wrap = $('#listWrap'); const links = filterLinks();
   if (links.length === 0) {
     const userName = ACTIVE_USER === 'yuroi' ? '유로이' : '다로이';
@@ -1318,20 +1403,24 @@ function renderList() {
   links.forEach(link => {
     const label = relativeDateLabel(link.createdAt);
     if (label !== lastLabel) { html += `<div class="date-group-label">${label}</div>`; lastLabel = label; }
-    const cat = findCat(link.categoryId);
+    const cat = link.categoryId ? findCat(link.categoryId) : null;
     const accent = cat ? cat.color : 'var(--clay)';
-    const catName = cat ? cat.name : '알 수 없음';
+    const catName = cat ? cat.name : '미분류';
+    const siteInfo = link.siteType ? getSiteTypeInfo(link.siteType) : null;
+    const siteLabel = siteInfo && link.siteType !== 'other' ? siteInfo.label : '';
     const tagHtml = link.tagIds.slice(0,2).map(tid => { const t = findTag(tid); return t ? `<span class="link-tag-mini">#${escapeHtml(t.name)}</span>` : ''; }).join('');
     const moreTags = link.tagIds.length > 2 ? `<span class="link-tag-mini">+${link.tagIds.length-2}</span>` : '';
+    const isOther = link.owner && link.owner !== ACTIVE_USER;
+    const ownerBadge = isOther ? `<span class="owner-badge">${link.owner === 'yuroi' ? '👩' : '👨'}</span>` : '';
     html += `
-      <div class="link-row" style="--accent:${accent}" data-id="${link.id}" onclick="openReader('${link.id}')">
+      <div class="link-row ${isOther ? 'other-owner' : ''}" style="--accent:${accent}" data-id="${link.id}" onclick="openReader('${link.id}')">
         <div class="topic-dot"></div>
         <div class="link-main">
-          <div class="link-title">${escapeHtml(link.title)}</div>
+          <div class="link-title">${ownerBadge}${escapeHtml(link.title)}</div>
           <div class="link-bottom">
             <span class="link-cat-badge">${escapeHtml(catName)}</span>
             ${tagHtml ? `<span class="link-sep">·</span>${tagHtml}${moreTags}`:''}
-            ${link.itemType === 'mywork' ? '<span class="link-sep">·</span><span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>' : `<span class="link-sep">·</span><span class="link-domain">${escapeHtml(link.domain || '')}</span>`}
+            ${link.itemType === 'mywork' ? '<span class="link-sep">·</span><span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>' : `<span class="link-sep">·</span>${siteLabel ? `<span class="link-site-type">${siteLabel}</span><span class="link-sep">·</span>` : ''}<span class="link-domain">${escapeHtml(link.domain || '')}</span>`}
           </div>
         </div>
         <div class="link-icons" onclick="event.stopPropagation()">
@@ -1350,7 +1439,7 @@ function renderList() {
 /* ── 하단 카테고리 토글 ── */
 function renderChatTopics() {
   const cur = STATE.ui.chatCat;
-  let html = `<button class="chat-topic auto ${cur==='auto'?'selected':''}" onclick="setChatCat('auto')">자동 분류</button>`;
+  let html = `<button class="chat-topic auto ${cur==='auto'?'selected':''}" onclick="setChatCat('auto')">분류 없음</button>`;
   STATE.categories.forEach(c => {
     html += `<button class="chat-topic ${cur===c.id?'selected':''}" onclick="setChatCat('${c.id}')">${escapeHtml(c.name)}</button>`;
   });
@@ -1406,22 +1495,56 @@ let _quickSaveBlocked = false;
 
 /* ── 링크 메타(제목) 자동 가져오기 (Microlink 무료 API) ── */
 // TODO: 노션 링크 제목 가져오기 개선 필요 (현재 CORS로 실패)
-// - 옵션1: jsonlink.io API 시도
-// - 옵션2: Cloudflare Workers 프록시 구축
+// 제목 가져오기: 여러 API fallback
 async function fetchLinkMeta(url) {
+  const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject('timeout'), ms));
+
+  // 1차: Microlink API
   try {
-    const api = `https://api.microlink.io/?url=${encodeURIComponent(url)}`;
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(api, { signal: controller.signal });
-    clearTimeout(t);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.status === 'success' && data.data) {
-      return { title: data.data.title || null, desc: data.data.description || null };
+    const res = await Promise.race([
+      fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`),
+      timeout(4000)
+    ]);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'success' && data.data?.title) {
+        return { title: data.data.title, desc: data.data.description || null };
+      }
     }
-    return null;
-  } catch(e) { return null; }
+  } catch(e) {}
+
+  // 2차: jsonlink.io API
+  try {
+    const res = await Promise.race([
+      fetch(`https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`),
+      timeout(4000)
+    ]);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.title) {
+        return { title: data.title, desc: data.description || null };
+      }
+    }
+  } catch(e) {}
+
+  // 3차: CORS 프록시로 직접 HTML 파싱
+  try {
+    const res = await Promise.race([
+      fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
+      timeout(5000)
+    ]);
+    if (res.ok) {
+      const html = await res.text();
+      // og:title 또는 <title> 추출
+      const ogMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+                   || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
+      if (ogMatch) return { title: ogMatch[1], desc: null };
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (titleMatch) return { title: titleMatch[1].trim(), desc: null };
+    }
+  } catch(e) {}
+
+  return null;
 }
 
 function handleSend() {
@@ -1430,19 +1553,20 @@ function handleSend() {
   if (!text) { input.focus(); return; }
   const isUrl = looksLikeUrl(text);
   const dom = isUrl ? safeHostname(text) : '';
-  const chosenCat = STATE.ui.chatCat === 'auto'
-    ? (isUrl ? autoClassify(text) : fallbackCatId())
-    : STATE.ui.chatCat;
+  const chosenCat = STATE.ui.chatCat === 'auto' ? null : STATE.ui.chatCat;
   const chosenTags = (STATE.ui.chatCat !== 'auto' && STATE.ui.chatTags) ? [...STATE.ui.chatTags] : [];
+  const fullUrl = isUrl ? (text.startsWith('http') ? text : 'https://' + text) : '';
   const link = {
     id: uid('l'),
-    url: isUrl ? (text.startsWith('http') ? text : 'https://' + text) : '',
+    url: fullUrl,
     title: isUrl ? dom : text,
     domain: isUrl ? dom : '',
     createdAt: Date.now(),
     categoryId: chosenCat, tagIds: chosenTags,
     isFavorite: false,
     itemType: isUrl ? 'link' : 'mywork',
+    siteType: isUrl ? detectSiteType(fullUrl) : null,
+    owner: ACTIVE_USER,
     note: { text: '', images: [], collapsed: false },
     content: ''
   };
@@ -1545,22 +1669,36 @@ function saveNewWork() {
 
 /* ── 카테고리 CRUD ── */
 function openCatManage() { renderCatEditList(); openSheet('catManagePanel'); }
+let _catSortable = null;
 function renderCatEditList() {
   const list = $('#catEditList');
   list.innerHTML = STATE.categories.map(c => {
     const count = STATE.links.filter(l => l.categoryId === c.id).length;
     const canDel = !c.isFallback;
     return `
-      <div class="cat-edit-row" data-id="${c.id}" draggable="true"
-        ondragstart="catDragStart(event)" ondragend="catDragEnd(event)"
-        ondragover="catDragOver(event)" ondrop="catDrop(event)">
+      <div class="cat-edit-row" data-id="${c.id}">
+        <div class="cat-drag-handle">☰</div>
         <div class="cat-edit-dot" style="background:${c.color}"></div>
-        <input class="cat-edit-name" value="${escapeHtml(c.name)}" onchange="renameCat('${c.id}', this.value)" />
+        <input class="cat-edit-name" value="${escapeHtml(c.name)}" onblur="renameCat('${c.id}', this.value)" />
         <span class="cat-edit-count">${count}개</span>
-        <button class="cat-edit-tags" onclick="openTagManageFor('${c.id}')" title="이 카테고리 태그">#태그</button>
+        <button class="cat-edit-tags" onclick="openTagManageFor('${c.id}')" title="태그">#</button>
         ${canDel ? `<button class="cat-edit-del" onclick="deleteCat('${c.id}')">×</button>` : ''}
       </div>`;
   }).join('');
+  // SortableJS 초기화
+  if (_catSortable) _catSortable.destroy();
+  _catSortable = new Sortable(list, {
+    handle: '.cat-drag-handle',
+    animation: 150,
+    onEnd: function(evt) {
+      const oldIdx = evt.oldIndex;
+      const newIdx = evt.newIndex;
+      if (oldIdx === newIdx) return;
+      const [moved] = STATE.categories.splice(oldIdx, 1);
+      STATE.categories.splice(newIdx, 0, moved);
+      saveState(); renderCatBar(); renderChatTopics();
+    }
+  });
 }
 function addCategory() {
   const input = $('#newCatInput'); const name = input.value.trim();
@@ -1881,10 +2019,14 @@ function renderReader() {
   $('#readerTitle').textContent = link.title;
   $('#readerTitle').oninput = () => { link.title = $('#readerTitle').textContent.trim() || '제목 없음'; markDirty(); };
   // 메타
-  const cat = findCat(link.categoryId);
+  const cat = link.categoryId ? findCat(link.categoryId) : null;
   const tagStr = link.tagIds.map(tid => { const t = findTag(tid); return t ? `#${escapeHtml(t.name)}` : ''; }).filter(Boolean).join(' ');
-  const catBadge = cat ? `<span class="link-cat-badge" style="background:${cat.color}22;color:${cat.color}">${escapeHtml(cat.name)}</span>` : '';
-  const urlLink = link.url ? `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.domain)}</a>` : `<span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>`;
+  const catBadge = cat
+    ? `<span class="link-cat-badge" style="background:${cat.color}22;color:${cat.color}">${escapeHtml(cat.name)}</span>`
+    : `<span class="link-cat-badge" style="background:var(--clay);color:var(--dim)">미분류</span>`;
+  const siteInfo = link.siteType ? getSiteTypeInfo(link.siteType) : null;
+  const siteLabel = siteInfo && link.siteType !== 'other' ? `<span class="link-site-type">${siteInfo.label}</span><span class="sep">·</span>` : '';
+  const urlLink = link.url ? `${siteLabel}<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.domain)}</a>` : `<span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>`;
   $('#readerMeta').innerHTML = `${catBadge}<span class="sep">·</span>${urlLink}${tagStr?`<span class="sep">·</span>${tagStr}`:''}`;
   // 노트
   $('#noteText').value = link.note?.text || '';
@@ -1957,7 +2099,13 @@ function removeNoteImage(i) {
 
 /* ── 시트 공통 ── */
 function openSheet(id) { $('#'+id).classList.add('open'); }
-function closeSheet(id) { $('#'+id).classList.remove('open'); }
+function closeSheet(id) {
+  // 시트 닫기 전 input blur 처리 (저장 트리거)
+  const sheet = $('#'+id);
+  const activeInput = sheet.querySelector('input:focus');
+  if (activeInput) activeInput.blur();
+  sheet.classList.remove('open');
+}
 
 /* ── 초기 ── */
 function renderAll() {
