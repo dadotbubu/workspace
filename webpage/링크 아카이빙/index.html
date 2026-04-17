@@ -1191,44 +1191,53 @@ function syncToCloud() {
   }, 1500);
 }
 
+// 상대방 데이터 (표시 전용, 저장 안함)
+let OTHER_DATA = { links: [], categories: [], tags: [] };
+
 async function syncFromCloud() {
   const sb = getSupabase();
   if (!sb) { showToast('⚠️ 동기화 설정 없음'); return; }
   const btn = $('#syncBtn');
   if (btn) btn.style.animation = 'spin 1s linear infinite';
   try {
-    // 유로이 + 다로이 둘 다 가져오기
     const { data, error } = await sb.from(SYNC.table || 'archive_profiles').select('id, data, updated_at');
     if (error) throw error;
-    let added = { cats: 0, tags: 0, links: 0 };
+    let myAdded = 0, otherAdded = 0;
+    OTHER_DATA = { links: [], categories: [], tags: [] }; // 초기화
+
     (data || []).forEach(row => {
       const cloud = row.data;
-      const owner = row.id; // 'yuroi' 또는 'daroi'
+      const owner = row.id;
       if (!cloud) return;
-      // 카테고리 병합 (없는 것만 추가)
-      (cloud.categories || []).forEach(c => {
-        if (!STATE.categories.find(x => x.id === c.id)) { STATE.categories.push(c); added.cats++; }
-      });
-      // 태그 병합
-      (cloud.tags || []).forEach(t => {
-        if (!STATE.tags.find(x => x.id === t.id)) { STATE.tags.push(t); added.tags++; }
-      });
-      // 링크 병합 (owner 표시 추가)
-      (cloud.links || []).forEach(l => {
-        if (!STATE.links.find(x => x.id === l.id)) {
-          l.owner = owner; // 누구 링크인지 표시
-          STATE.links.push(l);
-          added.links++;
-        }
-      });
+
+      if (owner === ACTIVE_USER) {
+        // 내 데이터: STATE에 병합
+        (cloud.categories || []).forEach(c => {
+          if (!STATE.categories.find(x => x.id === c.id)) STATE.categories.push(c);
+        });
+        (cloud.tags || []).forEach(t => {
+          if (!STATE.tags.find(x => x.id === t.id)) STATE.tags.push(t);
+        });
+        (cloud.links || []).forEach(l => {
+          if (!STATE.links.find(x => x.id === l.id)) {
+            l.owner = owner;
+            STATE.links.push(l);
+            myAdded++;
+          }
+        });
+      } else {
+        // 상대방 데이터: OTHER_DATA에 저장 (표시 전용)
+        OTHER_DATA.categories = cloud.categories || [];
+        OTHER_DATA.tags = cloud.tags || [];
+        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner }));
+        otherAdded = OTHER_DATA.links.length;
+      }
     });
-    if (added.links > 0 || added.cats > 0 || added.tags > 0) {
-      saveState();
-      renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList(); renderFavToggle();
-      showToast(`☁️ +${added.cats}카테고리, +${added.tags}태그, +${added.links}링크`);
-    } else {
-      showToast('☁️ 이미 최신 상태');
-    }
+
+    if (myAdded > 0) saveState();
+    renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList(); renderFavToggle();
+    const otherName = ACTIVE_USER === 'yuroi' ? '다로이' : '유로이';
+    showToast(`☁️ 내 +${myAdded}개, ${otherName} ${otherAdded}개 표시`);
   } catch (e) {
     console.log('sync error', e);
     showToast('⚠️ 동기화 실패');
@@ -1379,7 +1388,9 @@ function setSiteTypeFilter(type) {
 function filterLinks() {
   const f = STATE.filter;
   const q = (f.search || '').trim().toLowerCase();
-  return STATE.links.filter(l => {
+  // 내 링크 + 상대방 링크 합치기
+  const allLinks = [...STATE.links, ...(OTHER_DATA.links || [])];
+  return allLinks.filter(l => {
     if (f.categoryId !== 'all' && l.categoryId !== f.categoryId) return false;
     if (f.siteType && f.siteType !== 'all' && l.siteType !== f.siteType) return false;
     if (f.tagId && !l.tagIds.includes(f.tagId)) return false;
