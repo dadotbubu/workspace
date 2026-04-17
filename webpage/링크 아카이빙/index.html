@@ -1191,8 +1191,8 @@ function syncToCloud() {
   }, 1500);
 }
 
-// 상대방 데이터 (표시 전용, 저장 안함)
-let OTHER_DATA = { links: [], categories: [], tags: [] };
+// 상대방 데이터 (읽기 전용, 절대 STATE에 추가 안 함)
+let OTHER_DATA = { links: [] };
 
 async function syncFromCloud() {
   const sb = getSupabase();
@@ -1202,8 +1202,9 @@ async function syncFromCloud() {
   try {
     const { data, error } = await sb.from(SYNC.table || 'archive_profiles').select('id, data, updated_at');
     if (error) throw error;
-    let myAdded = 0, otherAdded = 0;
-    OTHER_DATA = { links: [], categories: [], tags: [] }; // 초기화
+
+    OTHER_DATA = { links: [] }; // 초기화
+    let myCount = 0, otherCount = 0;
 
     (data || []).forEach(row => {
       const cloud = row.data;
@@ -1211,33 +1212,22 @@ async function syncFromCloud() {
       if (!cloud) return;
 
       if (owner === ACTIVE_USER) {
-        // 내 데이터: STATE에 병합
-        (cloud.categories || []).forEach(c => {
-          if (!STATE.categories.find(x => x.id === c.id)) STATE.categories.push(c);
-        });
-        (cloud.tags || []).forEach(t => {
-          if (!STATE.tags.find(x => x.id === t.id)) STATE.tags.push(t);
-        });
-        (cloud.links || []).forEach(l => {
-          if (!STATE.links.find(x => x.id === l.id)) {
-            l.owner = owner;
-            STATE.links.push(l);
-            myAdded++;
-          }
-        });
+        // 내 데이터: 클라우드로 완전 교체 (병합 X)
+        STATE.categories = cloud.categories || STATE.categories;
+        STATE.tags = cloud.tags || STATE.tags;
+        STATE.links = (cloud.links || []).map(l => ({ ...l, owner: ACTIVE_USER }));
+        myCount = STATE.links.length;
       } else {
-        // 상대방 데이터: OTHER_DATA에 저장 (표시 전용)
-        OTHER_DATA.categories = cloud.categories || [];
-        OTHER_DATA.tags = cloud.tags || [];
-        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner }));
-        otherAdded = OTHER_DATA.links.length;
+        // 상대방 데이터: OTHER_DATA에만 저장 (읽기 전용)
+        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner, _readonly: true }));
+        otherCount = OTHER_DATA.links.length;
       }
     });
 
-    if (myAdded > 0) saveState();
+    saveState();
     renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList(); renderFavToggle();
     const otherName = ACTIVE_USER === 'yuroi' ? '다로이' : '유로이';
-    showToast(`☁️ 내 +${myAdded}개, ${otherName} ${otherAdded}개 표시`);
+    showToast(`☁️ 내 ${myCount}개, ${otherName} ${otherCount}개`);
   } catch (e) {
     console.log('sync error', e);
     showToast('⚠️ 동기화 실패');
