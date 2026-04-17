@@ -2343,6 +2343,82 @@ async function autoSync() {
   } catch (e) { console.log('auto sync error', e); }
 }
 
+// ═══ 클라우드 데이터 복구 (콘솔에서 fixCloudData() 실행) ═══
+async function fixCloudData() {
+  const sb = getSupabase();
+  if (!sb) { console.log('❌ Supabase 없음'); return; }
+
+  console.log('📊 클라우드 데이터 확인 중...');
+  const { data, error } = await sb.from('archive_profiles').select('id, data');
+  if (error) { console.log('❌ 에러:', error); return; }
+
+  // 모든 링크 수집
+  let allLinks = [];
+  let allCats = { yuroi: [], daroi: [] };
+  let allTags = { yuroi: [], daroi: [] };
+
+  data.forEach(row => {
+    const cloud = row.data;
+    const rowOwner = row.id;
+    if (!cloud) return;
+
+    console.log(`\n=== ${rowOwner} 클라우드 ===`);
+    console.log('링크:', cloud.links?.length || 0);
+    console.log('카테고리:', cloud.categories?.length || 0);
+
+    // 카테고리/태그는 원래 주인 것 유지
+    if (rowOwner === 'yuroi' || rowOwner === 'daroi') {
+      allCats[rowOwner] = cloud.categories || [];
+      allTags[rowOwner] = cloud.tags || [];
+    }
+
+    // 링크는 owner 필드 기준으로 분리
+    (cloud.links || []).forEach(l => {
+      const linkOwner = l.owner || rowOwner; // owner 없으면 저장된 위치 기준
+      allLinks.push({ ...l, owner: linkOwner });
+    });
+  });
+
+  // owner 기준으로 분리
+  const yuroiLinks = allLinks.filter(l => l.owner === 'yuroi');
+  const daroiLinks = allLinks.filter(l => l.owner === 'daroi');
+
+  // 중복 제거 (id 기준)
+  const uniqueYuroi = [...new Map(yuroiLinks.map(l => [l.id, l])).values()];
+  const uniqueDaroi = [...new Map(daroiLinks.map(l => [l.id, l])).values()];
+
+  console.log('\n📋 분리 결과:');
+  console.log('유로이 링크:', uniqueYuroi.length);
+  console.log('다로이 링크:', uniqueDaroi.length);
+
+  const proceed = confirm(`유로이 ${uniqueYuroi.length}개, 다로이 ${uniqueDaroi.length}개로 분리합니다. 진행할까요?`);
+  if (!proceed) { console.log('취소됨'); return; }
+
+  // 유로이 데이터 업로드
+  const yuroiData = {
+    categories: allCats.yuroi.length ? allCats.yuroi : DEFAULT_CATEGORIES,
+    tags: allTags.yuroi,
+    links: uniqueYuroi,
+    filter: { categoryId: 'all', siteType: 'all', tagId: null, favoriteOnly: false, search: '' },
+    ui: { chatCat: 'auto', chatTags: [] }
+  };
+  await sb.from('archive_profiles').upsert({ id: 'yuroi', data: yuroiData, updated_at: new Date().toISOString() });
+  console.log('✅ 유로이 클라우드 저장 완료');
+
+  // 다로이 데이터 업로드
+  const daroiData = {
+    categories: allCats.daroi.length ? allCats.daroi : DEFAULT_CATEGORIES,
+    tags: allTags.daroi,
+    links: uniqueDaroi,
+    filter: { categoryId: 'all', siteType: 'all', tagId: null, favoriteOnly: false, search: '' },
+    ui: { chatCat: 'auto', chatTags: [] }
+  };
+  await sb.from('archive_profiles').upsert({ id: 'daroi', data: daroiData, updated_at: new Date().toISOString() });
+  console.log('✅ 다로이 클라우드 저장 완료');
+
+  console.log('\n🎉 완료! 새로고침 후 동기화 버튼 눌러주세요.');
+}
+
 initApp();
 </script>
 </body>
