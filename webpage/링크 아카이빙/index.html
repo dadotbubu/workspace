@@ -372,6 +372,19 @@ input, textarea { font-family: inherit; }
 }
 .add-menu button:hover { background: var(--muted); }
 .add-menu-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+
+/* 읽기 전용 모드 (상대방 데이터 볼 때) */
+body.readonly-mode .chat-bar { display: none; }
+body.readonly-mode { padding-bottom: 20px; }
+.readonly-banner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  background: var(--muted); border-top: 1px solid var(--stone);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  text-align: center; font-size: 13px; color: var(--dim);
+  display: none;
+}
+body.readonly-mode .readonly-banner { display: block; }
+.link-row.readonly .link-icons { display: none; }
 .chat-new-btn.open { background: var(--forest); }
 .chat-new-btn.open #addBtnIcon { transform: rotate(45deg); }
 
@@ -777,6 +790,43 @@ input, textarea { font-family: inherit; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
 
+/* 사용자 선택 모달 */
+.user-select-modal {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.5); display: flex;
+  align-items: center; justify-content: center;
+  display: none;
+}
+.user-select-modal.show { display: flex; }
+.user-select-box {
+  background: var(--card-bg); border-radius: 20px;
+  padding: 32px; text-align: center; max-width: 300px;
+}
+.user-select-title {
+  font-size: 18px; font-weight: 700; color: var(--forest);
+  margin-bottom: 8px;
+}
+.user-select-desc {
+  font-size: 13px; color: var(--dim); margin-bottom: 24px;
+}
+.user-select-btns {
+  display: flex; gap: 12px; justify-content: center;
+}
+.user-select-btns button {
+  flex: 1; padding: 16px; border: 2px solid var(--stone);
+  border-radius: 16px; background: var(--card-bg);
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.user-select-btns button:hover {
+  border-color: var(--terra); background: var(--muted);
+}
+
+/* 전환 버튼 숨김 (고정된 경우) */
+/* .user-toggle.fixed { display: none; } */ /* 전환 모드 유지 */
+.user-toggle .utog.viewing { opacity: 0.6; font-style: italic; }
+.utog.viewing::after { content: ' 👀'; font-size: 9px; }
+
 /* 툴팁 */
 [data-tip] { position: relative; }
 [data-tip]::after {
@@ -866,6 +916,10 @@ input, textarea { font-family: inherit; }
   <button onclick="closeAddMenu(); openTagManage()">
     <span class="add-menu-icon">🏷</span><span>태그 관리</span>
   </button>
+</div>
+
+<div class="readonly-banner" id="readonlyBanner">
+  👀 둘러보기 모드 · 수정할 수 없어요
 </div>
 
 <!-- 카테고리 관리 시트 -->
@@ -1062,9 +1116,22 @@ input, textarea { font-family: inherit; }
 
 <div class="toast" id="toast"></div>
 
+<!-- 사용자 선택 모달 (처음 1회만) -->
+<div class="user-select-modal" id="userSelectModal">
+  <div class="user-select-box">
+    <div class="user-select-title">누구의 아카이브인가요?</div>
+    <div class="user-select-desc">이 기기에서 사용할 계정을 선택하세요</div>
+    <div class="user-select-btns">
+      <button onclick="fixUser('yuroi')">👩 유로이</button>
+      <button onclick="fixUser('daroi')">👨 다로이</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_PREFIX = 'archive_app_v2_';
 const USER_KEY       = 'archive_app_active_user';
+const USER_FIXED_KEY = 'archive_user_fixed'; // 고정된 내 아이덴티티 (yuroi 또는 daroi)
 
 (function migrate(){
   // 샘플 데이터 완전 정리 (최초 1회만 실행)
@@ -1107,7 +1174,8 @@ const SITE_TYPE_RULES = {
   other:   { label: '사이트', domains: [] },
 };
 
-let ACTIVE_USER = localStorage.getItem(USER_KEY) || 'yuroi';
+let FIXED_USER = localStorage.getItem(USER_FIXED_KEY) || null; // 고정된 내 아이덴티티
+let ACTIVE_USER = localStorage.getItem(USER_KEY) || FIXED_USER || 'yuroi';
 let STATE = loadUserState(ACTIVE_USER);
 migrateFilter(STATE);
 
@@ -1215,7 +1283,10 @@ async function syncFromCloud() {
         // 내 데이터: 클라우드로 완전 교체 (병합 X)
         STATE.categories = cloud.categories || STATE.categories;
         STATE.tags = cloud.tags || STATE.tags;
-        STATE.links = (cloud.links || []).map(l => ({ ...l, owner: ACTIVE_USER }));
+        // owner가 나인 링크만 가져오기 (섞인 데이터 필터링)
+        STATE.links = (cloud.links || [])
+          .filter(l => !l.owner || l.owner === ACTIVE_USER)
+          .map(l => ({ ...l, owner: ACTIVE_USER }));
         myCount = STATE.links.length;
       } else {
         // 상대방 데이터: OTHER_DATA에만 저장 (읽기 전용)
@@ -1241,9 +1312,17 @@ function safeHostname(url) { try { return new URL(url.startsWith('http') ? url :
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function findCat(id) { return STATE.categories.find(c => c.id === id); }
-function findTag(id) { return STATE.tags.find(t => t.id === id); }
-function findLink(id) { return STATE.links.find(l => l.id === id); }
+function findCat(id) {
+  return STATE.categories.find(c => c.id === id) ||
+         (isReadonlyMode() && OTHER_DATA.categories ? OTHER_DATA.categories.find(c => c.id === id) : null);
+}
+function findTag(id) {
+  return STATE.tags.find(t => t.id === id) ||
+         (isReadonlyMode() && OTHER_DATA.tags ? OTHER_DATA.tags.find(t => t.id === id) : null);
+}
+function findLink(id) {
+  return STATE.links.find(l => l.id === id) || (OTHER_DATA.links || []).find(l => l.id === id);
+}
 function fallbackCatId() { const fb = STATE.categories.find(c => c.isFallback); return fb ? fb.id : STATE.categories[STATE.categories.length-1].id; }
 function relativeDateLabel(ts) {
   const now = new Date(); const d = new Date(ts);
@@ -1279,7 +1358,7 @@ function showToast(msg) {
 /* ── 사용자 전환 ── */
 function switchUser(u) {
   if (u === ACTIVE_USER) return;
-  saveState();
+  if (ACTIVE_USER === FIXED_USER) saveState(); // 내 데이터일 때만 저장
   if ($('#reader').classList.contains('open')) closeReaderForce();
   ['catManagePanel','tagManagePanel','linkEditPanel','newWorkPanel','quickSavePanel'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('open');
@@ -1287,16 +1366,27 @@ function switchUser(u) {
   closeAddMenu();
   ACTIVE_USER = u;
   try { localStorage.setItem(USER_KEY, u); } catch(e){}
-  STATE = loadUserState(u);
-  migrateFilter(STATE);
+
   const si = $('#searchInput');
-  if (si) { si.value = STATE.filter.search || ''; $('#searchClear').classList.toggle('show', !!si.value); }
+  if (si) { si.value = ''; $('#searchClear').classList.remove('show'); }
+
   renderUserTabs();
   renderAll();
-  showToast((u === 'yuroi' ? '👩 유로이' : '👨 다로이') + ' 아카이브');
+
+  const isViewing = (ACTIVE_USER !== FIXED_USER);
+  const emoji = (u === 'yuroi' ? '👩 유로이' : '👨 다로이');
+  showToast(isViewing ? emoji + ' 둘러보기 👀' : emoji + ' 아카이브');
 }
 function renderUserTabs() {
-  $$('#userToggle .utog').forEach(t => t.classList.toggle('active', t.dataset.user === ACTIVE_USER));
+  const isViewing = (ACTIVE_USER !== FIXED_USER);
+  $$('#userToggle .utog').forEach(t => {
+    const isActive = (t.dataset.user === ACTIVE_USER);
+    t.classList.toggle('active', isActive);
+    t.classList.toggle('viewing', isActive && isViewing);
+  });
+}
+function isReadonlyMode() {
+  return FIXED_USER && ACTIVE_USER !== FIXED_USER;
 }
 
 /* ── 즐겨찾기 ── */
@@ -1334,17 +1424,19 @@ function setTagFilter(id) { STATE.filter.tagId = id; saveState(); renderTagBar()
 
 function renderCatBar() {
   const bar = $('#catBar'); const f = STATE.filter.categoryId;
+  const cats = isReadonlyMode() ? (OTHER_DATA.categories || []) : STATE.categories;
   let html = `<button class="chip ${f==='all'?'active':''}" onclick="setCatFilter('all')">전체</button>`;
-  STATE.categories.forEach(c => {
+  cats.forEach(c => {
     html += `<button class="chip ${f===c.id?'active':''}" onclick="setCatFilter('${c.id}')">${escapeHtml(c.name)}</button>`;
   });
   bar.innerHTML = html;
 }
 function renderTagBar() {
   const bar = $('#tagBar'); const catId = STATE.filter.categoryId;
+  const tags = isReadonlyMode() ? (OTHER_DATA.tags || []) : STATE.tags;
   let relevantTags = catId === 'all'
-    ? STATE.tags.filter(t => t.scope === 'common')
-    : STATE.tags.filter(t => t.scope === 'common' || t.categoryId === catId);
+    ? tags.filter(t => t.scope === 'common')
+    : tags.filter(t => t.scope === 'common' || t.categoryId === catId);
   if (relevantTags.length === 0) { bar.classList.add('hidden'); return; }
   bar.classList.remove('hidden');
   const f = STATE.filter.tagId;
@@ -1357,7 +1449,8 @@ function renderTagBar() {
 function renderSiteTypeBar() {
   const bar = $('#siteTypeBar');
   // 현재 링크에서 사용 중인 siteType만 표시
-  const usedTypes = new Set(STATE.links.map(l => l.siteType).filter(Boolean));
+  const sourceLinks = isReadonlyMode() ? (OTHER_DATA.links || []) : STATE.links;
+  const usedTypes = new Set(sourceLinks.map(l => l.siteType).filter(Boolean));
   if (usedTypes.size <= 1) { bar.classList.add('hidden'); return; }
   bar.classList.remove('hidden');
   const f = STATE.filter.siteType || 'all';
@@ -1378,9 +1471,9 @@ function setSiteTypeFilter(type) {
 function filterLinks() {
   const f = STATE.filter;
   const q = (f.search || '').trim().toLowerCase();
-  // 내 링크 + 상대방 링크 합치기
-  const allLinks = [...STATE.links, ...(OTHER_DATA.links || [])];
-  return allLinks.filter(l => {
+  // 뷰에 따라 데이터 소스 선택
+  const sourceLinks = isReadonlyMode() ? (OTHER_DATA.links || []) : STATE.links;
+  return sourceLinks.filter(l => {
     if (f.categoryId !== 'all' && l.categoryId !== f.categoryId) return false;
     if (f.siteType && f.siteType !== 'all' && l.siteType !== f.siteType) return false;
     if (f.tagId && !l.tagIds.includes(f.tagId)) return false;
@@ -1397,7 +1490,11 @@ function renderList() {
   const wrap = $('#listWrap'); const links = filterLinks();
   if (links.length === 0) {
     const userName = ACTIVE_USER === 'yuroi' ? '유로이' : '다로이';
-    wrap.innerHTML = `<div class="list-empty">${userName}의 아카이브가 비어있어요<br/><br/>아래 입력창에 URL이나 메모를 남겨보세요<br/>+ 버튼으로 카테고리·태그도 만들 수 있어요</div>`;
+    if (isReadonlyMode()) {
+      wrap.innerHTML = `<div class="list-empty">${userName}의 아카이브가 비어있어요</div>`;
+    } else {
+      wrap.innerHTML = `<div class="list-empty">${userName}의 아카이브가 비어있어요<br/><br/>아래 입력창에 URL이나 메모를 남겨보세요<br/>+ 버튼으로 카테고리·태그도 만들 수 있어요</div>`;
+    }
     return;
   }
   let lastLabel = null; let html = '';
@@ -1411,27 +1508,26 @@ function renderList() {
     const siteLabel = siteInfo && link.siteType !== 'other' ? siteInfo.label : '';
     const tagHtml = link.tagIds.slice(0,2).map(tid => { const t = findTag(tid); return t ? `<span class="link-tag-mini">#${escapeHtml(t.name)}</span>` : ''; }).join('');
     const moreTags = link.tagIds.length > 2 ? `<span class="link-tag-mini">+${link.tagIds.length-2}</span>` : '';
-    const isOther = link.owner && link.owner !== ACTIVE_USER;
-    const ownerBadge = isOther ? `<span class="owner-badge">${link.owner === 'yuroi' ? '👩' : '👨'}</span>` : '';
+    const readonly = isReadonlyMode();
     html += `
-      <div class="link-row ${isOther ? 'other-owner' : ''}" style="--accent:${accent}" data-id="${link.id}" onclick="openReader('${link.id}')">
+      <div class="link-row ${readonly ? 'readonly' : ''}" style="--accent:${accent}" data-id="${link.id}" onclick="openReader('${link.id}')">
         <div class="topic-dot"></div>
         <div class="link-main">
-          <div class="link-title">${ownerBadge}${escapeHtml(link.title)}</div>
+          <div class="link-title">${escapeHtml(link.title)}</div>
           <div class="link-bottom">
             <span class="link-cat-badge">${escapeHtml(catName)}</span>
             ${tagHtml ? `<span class="link-sep">·</span>${tagHtml}${moreTags}`:''}
             ${link.itemType === 'mywork' ? '<span class="link-sep">·</span><span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>' : `<span class="link-sep">·</span>${siteLabel ? `<span class="link-site-type">${siteLabel}</span><span class="link-sep">·</span>` : ''}<span class="link-domain">${escapeHtml(link.domain || '')}</span>`}
           </div>
         </div>
-        <div class="link-icons" onclick="event.stopPropagation()">
+        ${readonly ? '' : `<div class="link-icons" onclick="event.stopPropagation()">
           <button class="icon-btn" onclick="openQuickTagEdit('${link.id}')" title="태그 편집">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
           </button>
           <button class="icon-btn ${link.isFavorite?'fav-on':''}" onclick="toggleFav('${link.id}')" title="즐겨찾기">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="${link.isFavorite?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </button>
-        </div>
+        </div>`}
       </div>`;
   });
   wrap.innerHTML = html;
@@ -2016,24 +2112,42 @@ function closeReaderForce() {
 
 function renderReader() {
   const link = findLink(STATE.currentLinkId); if (!link) return;
+  const isReadonly = isReadonlyMode() || link._readonly;
+
   // 제목
   $('#readerTitle').textContent = link.title;
-  $('#readerTitle').oninput = () => { link.title = $('#readerTitle').textContent.trim() || '제목 없음'; markDirty(); };
+  $('#readerTitle').contentEditable = !isReadonly;
+  if (isReadonly) {
+    $('#readerTitle').oninput = null;
+  } else {
+    $('#readerTitle').oninput = () => { link.title = $('#readerTitle').textContent.trim() || '제목 없음'; markDirty(); };
+  }
+
   // 메타
   const cat = link.categoryId ? findCat(link.categoryId) : null;
   const tagStr = link.tagIds.map(tid => { const t = findTag(tid); return t ? `#${escapeHtml(t.name)}` : ''; }).filter(Boolean).join(' ');
   const catBadge = cat
     ? `<span class="link-cat-badge" style="background:${cat.color}22;color:${cat.color}">${escapeHtml(cat.name)}</span>`
     : `<span class="link-cat-badge" style="background:var(--clay);color:var(--dim)">미분류</span>`;
+  const ownerBadge = isReadonly ? `<span class="owner-badge">${link.owner === 'yuroi' ? '👩' : '👨'}</span>` : '';
   const siteInfo = link.siteType ? getSiteTypeInfo(link.siteType) : null;
   const siteLabel = siteInfo && link.siteType !== 'other' ? `<span class="link-site-type">${siteInfo.label}</span><span class="sep">·</span>` : '';
   const urlLink = link.url ? `${siteLabel}<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.domain)}</a>` : `<span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>`;
-  $('#readerMeta').innerHTML = `${catBadge}<span class="sep">·</span>${urlLink}${tagStr?`<span class="sep">·</span>${tagStr}`:''}`;
+  $('#readerMeta').innerHTML = `${ownerBadge}${catBadge}<span class="sep">·</span>${urlLink}${tagStr?`<span class="sep">·</span>${tagStr}`:''}`;
+
   // 노트
   $('#noteText').value = link.note?.text || '';
+  $('#noteText').disabled = isReadonly;
   $('#noteCard').classList.toggle('collapsed', link.note?.collapsed === true);
+  $('#noteCard').style.display = isReadonly && !link.note?.text ? 'none' : '';
   renderNoteImages();
-  $('#noteText').oninput = () => { link.note.text = $('#noteText').value; markDirty(); };
+  if (!isReadonly) {
+    $('#noteText').oninput = () => { link.note.text = $('#noteText').value; markDirty(); };
+  }
+
+  // 읽기 전용이면 액션 버튼 숨기기
+  const actions = $('#readerActions');
+  if (actions) actions.style.display = isReadonly ? 'none' : '';
   // 본문 영역: link.url이 있으면 preview card, 아니면 mywork 텍스트
   const previewArea = $('#previewArea');
   const myworkContent = $('#myworkContent');
@@ -2110,41 +2224,92 @@ function closeSheet(id) {
 
 /* ── 초기 ── */
 function renderAll() {
+  // 읽기 전용 모드 토글
+  document.body.classList.toggle('readonly-mode', isReadonlyMode());
+  const banner = $('#readonlyBanner');
+  if (banner) {
+    const otherName = ACTIVE_USER === 'yuroi' ? '유로이' : '다로이';
+    banner.textContent = `👀 ${otherName} 둘러보기 · 수정할 수 없어요`;
+  }
+
   renderFavToggle();
   renderCatBar(); renderTagBar(); renderChatTopics(); renderChatTags(); renderList();
   const si = $('#searchInput');
   if (si) { si.value = STATE.filter.search || ''; $('#searchClear').classList.toggle('show', !!si.value); }
 }
-renderUserTabs();
-renderAll();
-if ($('#searchInput')) $('#searchInput').addEventListener('input', handleSearchInput);
 
-// 자동 동기화: 병합 방식 (기존 유지 + 새 것만 추가)
-(async function autoSync() {
+// 사용자 고정 함수 (최초 1회)
+function fixUser(user) {
+  FIXED_USER = user;
+  ACTIVE_USER = user;
+  localStorage.setItem(USER_FIXED_KEY, user); // 진짜 아이덴티티 저장
+  localStorage.setItem(USER_KEY, user);
+  STATE = loadUserState(user);
+  migrateFilter(STATE);
+  $('#userSelectModal').classList.remove('show');
+  renderUserTabs();
+  renderAll();
+  autoSync();
+}
+
+// 앱 시작
+function initApp() {
+  if (!FIXED_USER) {
+    // 처음 진입: 선택 모달 표시
+    $('#userSelectModal').classList.add('show');
+  } else {
+    // 고정된 사용자: 바로 시작 (전환 토글은 유지)
+    renderUserTabs();
+    renderAll();
+    autoSync();
+  }
+  if ($('#searchInput')) $('#searchInput').addEventListener('input', handleSearchInput);
+}
+
+// 자동 동기화: 내 데이터 병합 + 상대방 데이터 읽기 전용
+async function autoSync() {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb || !FIXED_USER) return;
   try {
-    const { data } = await sb.from(SYNC.table || 'archive_profiles').select('data, updated_at').eq('id', ACTIVE_USER).single();
-    if (data?.data) {
-      const cloud = data.data;
-      let added = 0;
-      (cloud.categories || []).forEach(c => {
-        if (!STATE.categories.find(x => x.id === c.id)) { STATE.categories.push(c); added++; }
-      });
-      (cloud.tags || []).forEach(t => {
-        if (!STATE.tags.find(x => x.id === t.id)) { STATE.tags.push(t); added++; }
-      });
-      (cloud.links || []).forEach(l => {
-        if (!STATE.links.find(x => x.id === l.id)) { STATE.links.push(l); added++; }
-      });
-      if (added > 0) {
-        saveState();
-        renderAll();
-        showToast('☁️ +' + added + '개 동기화됨');
+    const { data, error } = await sb.from(SYNC.table || 'archive_profiles').select('id, data');
+    if (error) throw error;
+
+    OTHER_DATA = { links: [], categories: [], tags: [] };
+    let myAdded = 0;
+
+    (data || []).forEach(row => {
+      const cloud = row.data;
+      const owner = row.id;
+      if (!cloud) return;
+
+      if (owner === FIXED_USER) {
+        // 내 데이터: 병합 (없는 것만 추가)
+        (cloud.categories || []).forEach(c => {
+          if (!STATE.categories.find(x => x.id === c.id)) STATE.categories.push(c);
+        });
+        (cloud.tags || []).forEach(t => {
+          if (!STATE.tags.find(x => x.id === t.id)) STATE.tags.push(t);
+        });
+        (cloud.links || []).forEach(l => {
+          if (!STATE.links.find(x => x.id === l.id)) {
+            STATE.links.push({ ...l, owner: FIXED_USER });
+            myAdded++;
+          }
+        });
+      } else {
+        // 상대방 데이터: OTHER_DATA에 저장 (읽기 전용)
+        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner, _readonly: true }));
+        OTHER_DATA.categories = cloud.categories || [];
+        OTHER_DATA.tags = cloud.tags || [];
       }
-    }
-  } catch (e) { console.log('auto sync skip', e); }
-})();
+    });
+
+    if (myAdded > 0) saveState();
+    renderAll();
+  } catch (e) { console.log('auto sync error', e); }
+}
+
+initApp();
 </script>
 </body>
 </html>
