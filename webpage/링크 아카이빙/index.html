@@ -1603,31 +1603,12 @@ function looksLikeUrl(s) {
 let _quickSaveLinkId = null;
 let _quickSaveBlocked = false;
 
-/* ── 링크 메타(제목) 자동 가져오기 ── */
+/* ── 링크 메타(제목) 자동 가져오기: Microlink 단독 ── */
 async function fetchLinkMeta(url) {
-  const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej('timeout'), ms));
-
-  // HTML에서 제목 추출하는 헬퍼
-  function extractTitle(html) {
-    // 1. og:title
-    const og1 = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
-    const og2 = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
-    if (og1) return og1[1];
-    if (og2) return og2[1];
-    // 2. twitter:title
-    const tw = html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i);
-    if (tw) return tw[1];
-    // 3. <title>
-    const title = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (title) return title[1].trim();
-    return null;
-  }
-
-  // 1차: Microlink API (빠르고 정확)
   try {
     const res = await Promise.race([
       fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`),
-      timeout(3000)
+      new Promise((_, rej) => setTimeout(() => rej('timeout'), 3000))
     ]);
     if (res.ok) {
       const data = await res.json();
@@ -1636,46 +1617,7 @@ async function fetchLinkMeta(url) {
       }
     }
   } catch(e) { console.log('microlink fail', e); }
-
-  // 2차: corsproxy.io (가장 안정적인 무료 프록시)
-  try {
-    const res = await Promise.race([
-      fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`),
-      timeout(5000)
-    ]);
-    if (res.ok) {
-      const html = await res.text();
-      const title = extractTitle(html);
-      if (title) return { title, desc: null };
-    }
-  } catch(e) { console.log('corsproxy.io fail', e); }
-
-  // 3차: allorigins
-  try {
-    const res = await Promise.race([
-      fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
-      timeout(5000)
-    ]);
-    if (res.ok) {
-      const html = await res.text();
-      const title = extractTitle(html);
-      if (title) return { title, desc: null };
-    }
-  } catch(e) { console.log('allorigins fail', e); }
-
-  // 4차: jsonlink.io
-  try {
-    const res = await Promise.race([
-      fetch(`https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`),
-      timeout(4000)
-    ]);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.title) return { title: data.title, desc: data.description || null };
-    }
-  } catch(e) { console.log('jsonlink fail', e); }
-
-  return null;
+  return null; // 실패 시 도메인명 사용 (handleSend에서 처리)
 }
 
 function handleSend() {
