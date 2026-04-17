@@ -870,9 +870,6 @@ body.readonly-mode .readonly-banner { display: block; }
     <button class="nav-btn" id="favToggle" onclick="toggleFavFilter()" title="즐겨찾기만 보기" data-tip="즐찾">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </button>
-    <button class="nav-btn" id="syncBtn" onclick="syncFromCloud()" title="클라우드 동기화" data-tip="동기화">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-    </button>
     <div class="user-toggle" id="userToggle">
       <button class="utog active" data-user="yuroi" onclick="switchUser('yuroi')" title="유로이 아카이브">
         <span>👩</span><span class="utog-label">유로이</span>
@@ -881,6 +878,7 @@ body.readonly-mode .readonly-banner { display: block; }
         <span>👨</span><span class="utog-label">다로이</span>
       </button>
     </div>
+    <button class="nav-btn" onclick="resetUser()" title="사용자 재선택" style="font-size:12px;width:auto;padding:0 8px;">🔄</button>
   </div>
 </nav>
 
@@ -1400,6 +1398,12 @@ function renderUserTabs() {
 }
 function isReadonlyMode() {
   return FIXED_USER && ACTIVE_USER !== FIXED_USER;
+}
+function resetUser() {
+  if (!confirm('사용자를 다시 선택하시겠어요?')) return;
+  localStorage.removeItem(USER_FIXED_KEY);
+  localStorage.removeItem(USER_KEY);
+  location.reload();
 }
 
 /* ── 즐겨찾기 ── */
