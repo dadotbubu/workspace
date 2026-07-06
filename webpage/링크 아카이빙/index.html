@@ -384,7 +384,6 @@ body.readonly-mode { padding-bottom: 20px; }
   display: none;
 }
 body.readonly-mode .readonly-banner { display: block; }
-.link-row.readonly .link-icons { display: none; }
 .chat-new-btn.open { background: var(--forest); }
 .chat-new-btn.open #addBtnIcon { transform: rotate(45deg); }
 
@@ -667,6 +666,86 @@ body.readonly-mode .readonly-banner { display: block; }
   cursor: pointer; transition: all 0.2s;
 }
 .note-upload:hover { border-color: var(--sage); color: var(--sage); background: var(--card-bg); }
+
+/* 추가 링크 목록 (리더) */
+.extra-links-card {
+  flex-shrink: 0;
+  background: var(--card-bg);
+  border-top: 1px solid var(--stone);
+}
+.extra-links-inner { max-width: 680px; margin: 0 auto; padding: 12px 20px 14px; }
+.extra-links-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.extra-link-add {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 11px;
+  background: var(--muted); border: 1px dashed var(--clay);
+  border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--dim);
+  cursor: pointer; transition: all 0.2s;
+}
+.extra-link-add:hover { border-color: var(--sage); color: var(--sage); background: var(--card-bg); }
+.extra-link-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0;
+}
+.extra-link-label {
+  flex-shrink: 0; width: 76px;
+  padding: 6px 8px; text-align: center;
+  font-size: 12px; font-weight: 600; color: var(--forest);
+  background: var(--card-bg); border: 1px solid var(--stone); border-radius: 8px;
+  outline: none;
+}
+.extra-link-label:focus { border-color: var(--sage); }
+.extra-link-input {
+  flex: 1; min-width: 0;
+  padding: 6px 10px;
+  font-size: 12.5px; color: var(--forest);
+  background: var(--card-bg); border: 1px solid var(--stone); border-radius: 8px;
+  outline: none;
+}
+.extra-link-input:focus { border-color: var(--sage); }
+.extra-link-label:disabled, .extra-link-input:disabled { background: transparent; border-color: transparent; color: var(--forest); opacity: 1; }
+.extra-link-open {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px;
+  background: var(--sage); color: #fff;
+  border: none; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.extra-link-open:hover { opacity: 0.85; }
+.extra-link-del {
+  flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: none; border: none; color: var(--dim);
+  font-size: 15px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.extra-link-del:hover { background: var(--muted); color: var(--terra); }
+.extra-links-empty { font-size: 11.5px; color: var(--dim); padding: 4px 0 2px; }
+
+/* 열기 링크 선택 메뉴 (목록에서 링크 여러 개일 때) */
+.open-menu {
+  position: fixed; z-index: 200;
+  min-width: 150px; max-width: 260px;
+  background: var(--card-bg); border: 1px solid var(--stone);
+  border-radius: 12px; padding: 5px;
+  box-shadow: 0 6px 24px rgba(45,58,49,0.16);
+  display: flex; flex-direction: column;
+}
+.open-menu-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 10px; border: none; background: none;
+  border-radius: 8px; cursor: pointer;
+  font-size: 12.5px; font-weight: 500; color: var(--forest);
+  text-align: left; transition: background 0.15s;
+}
+.open-menu-item svg { flex-shrink: 0; color: var(--sage); }
+.open-menu-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open-menu-item:hover { background: var(--muted); }
 
 /* 본문 영역 (preview card 또는 mywork) */
 .reader-content-wrap {
@@ -1066,7 +1145,7 @@ body.readonly-mode .readonly-banner { display: block; }
       </div>
     </div>
 
-    <div class="reader-content-wrap">
+    <div class="reader-content-wrap" id="previewWrap">
       <!-- 링크용 preview card -->
       <div id="previewArea">
         <a class="preview-card" id="previewCard" target="_blank" rel="noopener">
@@ -1086,11 +1165,25 @@ body.readonly-mode .readonly-banner { display: block; }
         </a>
         <div class="preview-hint">눌러서 새 탭에서 열어보세요</div>
       </div>
-      <!-- mywork (URL 없는 글) -->
-      <div class="mywork-content hidden" id="myworkContent" contenteditable="true" spellcheck="false" data-placeholder="여기에 글을 써보세요..."></div>
     </div>
 
-    <!-- 노트 (하단 고정) -->
+    <!-- 추가 링크 목록 (메모보다 위) -->
+    <div class="extra-links-card" id="extraLinksCard">
+      <div class="extra-links-inner">
+        <div class="extra-links-header">
+          <div class="note-header-left"><span>🔗</span><span>링크</span></div>
+          <button class="extra-link-add" id="extraLinkAddBtn" onclick="addExtraLink()" title="링크 추가">+ 추가</button>
+        </div>
+        <div class="extra-links-list" id="extraLinksList"></div>
+      </div>
+    </div>
+
+    <!-- mywork (URL 없는 글) — 메모/본문 -->
+    <div class="reader-content-wrap" id="myworkWrap" style="display:none">
+      <div class="mywork-content" id="myworkContent" contenteditable="true" spellcheck="false" data-placeholder="여기에 글이나 메모를 써보세요..."></div>
+    </div>
+
+    <!-- 노트 (링크 항목 전용 메모) -->
     <div class="note-card" id="noteCard">
       <div class="note-header" onclick="toggleNote()">
         <div class="note-header-left">
@@ -1184,11 +1277,12 @@ function migrateFilter(state) {
   if (typeof state.filter.search !== 'string') state.filter.search = '';
   if (!state.filter.siteType) state.filter.siteType = 'all';
   state.ui = state.ui || { chatCat: 'auto', chatTags: [], tagScope: 'common', tagScopeCat: null };
-  // 기존 링크에 siteType 마이그레이션
+  // 기존 링크에 siteType·extraUrls 마이그레이션
   (state.links || []).forEach(link => {
     if (link.url && !link.siteType) {
       link.siteType = detectSiteType(link.url);
     }
+    link.extraUrls = normExtraUrls(link.extraUrls);
   });
 }
 
@@ -1299,7 +1393,7 @@ async function syncFromCloud() {
         myCount = STATE.links.length;
       } else {
         // 상대방 데이터: OTHER_DATA에만 저장 (읽기 전용)
-        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner, _readonly: true }));
+        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner, _readonly: true, extraUrls: normExtraUrls(l.extraUrls) }));
         OTHER_DATA.categories = cloud.categories || [];
         OTHER_DATA.tags = cloud.tags || [];
         otherCount = OTHER_DATA.links.length;
@@ -1526,6 +1620,17 @@ function renderList() {
     const tagHtml = link.tagIds.slice(0,2).map(tid => { const t = findTag(tid); return t ? `<span class="link-tag-mini">#${escapeHtml(t.name)}</span>` : ''; }).join('');
     const moreTags = link.tagIds.length > 2 ? `<span class="link-tag-mini">+${link.tagIds.length-2}</span>` : '';
     const readonly = isReadonlyMode();
+    const hasUrl = !!(link.url || (link.extraUrls || []).some(x => x.url));
+    const openBtn = hasUrl ? `<button class="icon-btn" onclick="openLinkUrl(event, '${link.id}')" title="바로 열기">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </button>` : '';
+    const editBtns = readonly ? '' : `
+          <button class="icon-btn" onclick="openQuickTagEdit('${link.id}')" title="태그 편집">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
+          </button>
+          <button class="icon-btn ${link.isFavorite?'fav-on':''}" onclick="toggleFav('${link.id}')" title="즐겨찾기">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="${link.isFavorite?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>`;
     html += `
       <div class="link-row ${readonly ? 'readonly' : ''}" style="--accent:${accent}" data-id="${link.id}" onclick="openReader('${link.id}')">
         <div class="topic-dot"></div>
@@ -1537,14 +1642,7 @@ function renderList() {
             ${link.itemType === 'mywork' ? '<span class="link-sep">·</span><span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>' : `<span class="link-sep">·</span>${siteLabel ? `<span class="link-site-type">${siteLabel}</span><span class="link-sep">·</span>` : ''}<span class="link-domain">${escapeHtml(link.domain || '')}</span>`}
           </div>
         </div>
-        ${readonly ? '' : `<div class="link-icons" onclick="event.stopPropagation()">
-          <button class="icon-btn" onclick="openQuickTagEdit('${link.id}')" title="태그 편집">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
-          </button>
-          <button class="icon-btn ${link.isFavorite?'fav-on':''}" onclick="toggleFav('${link.id}')" title="즐겨찾기">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="${link.isFavorite?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          </button>
-        </div>`}
+        ${openBtn || editBtns ? `<div class="link-icons" onclick="event.stopPropagation()">${openBtn}${editBtns}</div>` : ''}
       </div>`;
   });
   wrap.innerHTML = html;
@@ -2115,11 +2213,13 @@ function renderReader() {
   const urlLink = link.url ? `${siteLabel}<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.domain)}</a>` : `<span style="color:var(--terra);font-weight:600;">✍️ 내 글</span>`;
   $('#readerMeta').innerHTML = `${ownerBadge}${catBadge}<span class="sep">·</span>${urlLink}${tagStr?`<span class="sep">·</span>${tagStr}`:''}`;
 
-  // 노트
+  // 노트: 링크 항목의 메모. mywork는 본문이 메모라서 노트 숨김(기존 노트 내용 있으면 표시)
+  const hasNoteContent = !!(link.note?.text || (link.note?.images || []).length);
+  const showNote = link.url ? (!isReadonly || hasNoteContent) : hasNoteContent;
   $('#noteText').value = link.note?.text || '';
   $('#noteText').disabled = isReadonly;
   $('#noteCard').classList.toggle('collapsed', link.note?.collapsed === true);
-  $('#noteCard').style.display = isReadonly && !link.note?.text ? 'none' : '';
+  $('#noteCard').style.display = showNote ? '' : 'none';
   renderNoteImages();
   if (!isReadonly) {
     $('#noteText').oninput = () => { link.note.text = $('#noteText').value; markDirty(); };
@@ -2128,28 +2228,110 @@ function renderReader() {
   // 읽기 전용이면 액션 버튼 숨기기
   const actions = $('#readerActions');
   if (actions) actions.style.display = isReadonly ? 'none' : '';
-  // 본문 영역: link.url이 있으면 preview card, 아니면 mywork 텍스트
-  const previewArea = $('#previewArea');
+  // 본문 영역: link.url이 있으면 preview card, 아니면 mywork 텍스트(메모)
   const myworkContent = $('#myworkContent');
   if (link.url) {
-    previewArea.classList.remove('hidden');
-    myworkContent.classList.add('hidden');
+    $('#previewWrap').style.display = '';
+    $('#myworkWrap').style.display = 'none';
     // 카드 정보 채우기
     const dom = link.domain || safeHostname(link.url);
-    const fullUrl = /^[a-z]+:\/\//i.test(link.url) ? link.url : 'https://' + link.url;
-    $('#previewCard').href = fullUrl;
+    $('#previewCard').href = normalizeUrl(link.url);
     $('#previewFavicon').src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dom)}&sz=128`;
     $('#previewFavicon').style.opacity = '1';
     $('#previewSource').textContent = dom.split('.').slice(-2)[0] || dom;
     $('#previewTitle').textContent = link.title;
     $('#previewUrl').textContent = link.url;
   } else {
-    previewArea.classList.add('hidden');
-    myworkContent.classList.remove('hidden');
+    $('#previewWrap').style.display = 'none';
+    $('#myworkWrap').style.display = '';
+    myworkContent.contentEditable = !isReadonly;
     myworkContent.innerHTML = link.content || '';
-    myworkContent.oninput = () => { link.content = myworkContent.innerHTML; markDirty(); };
+    myworkContent.oninput = isReadonly ? null : () => { link.content = myworkContent.innerHTML; markDirty(); };
   }
+  renderExtraLinks();
   renderReaderActions();
+}
+
+/* ── 바로 열기 & 추가 링크 ── */
+function normalizeUrl(u) { return /^[a-z]+:\/\//i.test(u) ? u : 'https://' + u; }
+// 구버전(문자열 배열) → {label, url} 객체 배열로 통일. 로드 시 1회 적용
+function normExtraUrls(arr) { return (arr || []).map(u => typeof u === 'string' ? { label: '', url: u } : u); }
+function gatherUrls(link) {
+  const arr = [];
+  if (link.url) arr.push({ label: link.domain || safeHostname(link.url), url: link.url });
+  (link.extraUrls || []).forEach(x => { if (x.url) arr.push({ label: x.label || safeHostname(x.url), url: x.url }); });
+  return arr;
+}
+function openLinkUrl(ev, id) {
+  const link = findLink(id); if (!link) return;
+  const urls = gatherUrls(link);
+  if (urls.length === 0) return;
+  if (urls.length === 1) { window.open(normalizeUrl(urls[0].url), '_blank', 'noopener'); return; }
+  showOpenMenu(ev.currentTarget, urls);
+}
+function showOpenMenu(anchor, urls) {
+  closeOpenMenu();
+  const menu = document.createElement('div');
+  menu.className = 'open-menu'; menu.id = 'openMenu';
+  menu.innerHTML = urls.map(u => `<button class="open-menu-item" data-url="${escapeHtml(u.url)}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      <span>${escapeHtml(u.label || u.url)}</span>
+    </button>`).join('');
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = Math.min(r.bottom + 6, window.innerHeight - menu.offsetHeight - 10) + 'px';
+  menu.style.left = Math.max(10, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 10)) + 'px';
+  menu.querySelectorAll('.open-menu-item').forEach(b => {
+    b.onclick = e => { e.stopPropagation(); window.open(normalizeUrl(b.dataset.url), '_blank', 'noopener'); closeOpenMenu(); };
+  });
+  setTimeout(() => document.addEventListener('click', closeOpenMenu, { once: true }), 0);
+}
+function closeOpenMenu() { const m = document.getElementById('openMenu'); if (m) m.remove(); }
+function renderExtraLinks(focusLast) {
+  const link = findLink(STATE.currentLinkId); if (!link) return;
+  const isReadonly = isReadonlyMode() || link._readonly;
+  const items = link.extraUrls || [];
+  $('#extraLinkAddBtn').style.display = isReadonly ? 'none' : '';
+  $('#extraLinksCard').style.display = (isReadonly && items.length === 0) ? 'none' : '';
+  if (items.length === 0) {
+    $('#extraLinksList').innerHTML = '<div class="extra-links-empty">+ 추가 버튼을 누르면 아래에 링크 칸이 생겨요</div>';
+    return;
+  }
+  $('#extraLinksList').innerHTML = items.map((it, i) => `
+    <div class="extra-link-row">
+      <input class="extra-link-label" value="${escapeHtml(it.label || '')}" placeholder="제목" ${isReadonly ? 'disabled' : ''} oninput="updateExtraLink(${i},'label',this.value)" onchange="saveState()" />
+      <input class="extra-link-input" value="${escapeHtml(it.url || '')}" placeholder="링크 또는 내용" ${isReadonly ? 'disabled' : ''} oninput="updateExtraLink(${i},'url',this.value)" onchange="saveState()" />
+      <button class="extra-link-open" onclick="openExtraLink(${i})">열기</button>
+      ${isReadonly ? '' : `<button class="extra-link-del" onclick="removeExtraLink(${i})" title="삭제">×</button>`}
+    </div>`).join('');
+  if (focusLast) {
+    const inputs = $('#extraLinksList').querySelectorAll('.extra-link-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+}
+function updateExtraLink(i, field, val) {
+  const link = findLink(STATE.currentLinkId);
+  if (!link?.extraUrls?.[i]) return;
+  link.extraUrls[i][field] = val.trim();
+}
+function addExtraLink() {
+  const link = findLink(STATE.currentLinkId); if (!link) return;
+  (link.extraUrls = link.extraUrls || []).push({ label: '', url: '' });
+  saveState();
+  renderExtraLinks(true);
+}
+function openExtraLink(i) {
+  const link = findLink(STATE.currentLinkId);
+  const u = link?.extraUrls?.[i]?.url;
+  if (!u) { showToast('링크 주소를 먼저 입력해주세요'); return; }
+  window.open(normalizeUrl(u), '_blank', 'noopener');
+}
+function removeExtraLink(i) {
+  const link = findLink(STATE.currentLinkId); if (!link?.extraUrls?.[i]) return;
+  const it = link.extraUrls[i];
+  if ((it.url || it.label) && !confirm('이 링크를 삭제할까요?')) return;
+  link.extraUrls.splice(i, 1);
+  saveState(); renderExtraLinks();
 }
 function renderReaderActions() {
   const link = findLink(STATE.currentLinkId); if (!link) return;
@@ -2278,7 +2460,7 @@ async function autoSync() {
         });
       } else {
         // 상대방 데이터: OTHER_DATA에 저장 (읽기 전용)
-        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner, _readonly: true }));
+        OTHER_DATA.links = (cloud.links || []).map(l => ({ ...l, owner, _readonly: true, extraUrls: normExtraUrls(l.extraUrls) }));
         OTHER_DATA.categories = cloud.categories || [];
         OTHER_DATA.tags = cloud.tags || [];
       }
