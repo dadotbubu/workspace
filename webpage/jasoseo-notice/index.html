@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 자소서 프롬프트 — 올인원 가이드 출시</title>
+<meta name="description" content="무료판 사용은 종료되었습니다. 업그레이드 된 자소서+면접 올인원 가이드를 만나보세요.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AI 자소서 프롬프트 — 올인원 가이드 출시">
+<meta property="og:description" content="무료판 사용은 종료되었습니다. 업그레이드 된 자소서+면접 올인원 가이드를 만나보세요.">
+<style>
+  :root {
+    --bg:        #0f1420;
+    --card:      #171d2c;
+    --card-2:    #1e2537;
+    --ink:       #f0eee9;
+    --sub:       #9aa3b5;
+    --line:      #2a3244;
+    --accent:    #c9a227;
+    --accent-2:  #e0b93f;
+    --accent-soft: rgba(201,162,39,.12);
+    --shadow:    0 10px 40px rgba(0,0,0,.45);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg); color: var(--ink);
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 28px 18px 40px;
+  }
+
+  /* ===== 소셜 헤더 (계산기·자소서 게이트와 톤 통일) ===== */
+  .g-social { display: flex; gap: 8px; width: 100%; max-width: 380px; animation: fadeDown .5s ease .05s both; }
+  .g-social a {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 10px 8px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--line); color: var(--ink);
+    font-size: 13px; font-weight: 700; text-decoration: none; letter-spacing: -0.3px;
+    transition: transform .12s, border-color .15s;
+  }
+  .g-social a:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .g-social .soc-ic { flex-shrink: 0; }
+
+  /* ===== 본문 카드 ===== */
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    padding: 34px 24px 28px; max-width: 380px; width: 100%;
+    text-align: center; box-shadow: var(--shadow);
+    animation: fadeUp .5s ease both;
+  }
+  .badge {
+    display: inline-block; margin-bottom: 16px;
+    padding: 5px 13px; border-radius: 999px;
+    background: var(--accent-soft); border: 1px solid rgba(201,162,39,.3);
+    color: var(--accent-2); font-size: 11.5px; font-weight: 800; letter-spacing: .2px;
+  }
+  .p-title { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--ink); word-break: keep-all; }
+  .p-note {
+    margin: 14px 0 0; font-size: 14px; font-weight: 600;
+    color: var(--sub); line-height: 1.75; word-break: keep-all;
+  }
+  .p-note strong { color: var(--ink); font-weight: 700; }
+
+  /* ===== 구성 안내 ===== */
+  .full {
+    margin-top: 20px; padding: 16px 15px;
+    background: var(--card-2); border: 1px solid var(--line); border-radius: 16px;
+    text-align: left;
+  }
+  .full ul { list-style: none; display: grid; gap: 11px; }
+  .full li { word-break: keep-all; }
+  .full .lab {
+    display: inline-block; margin-bottom: 4px;
+    font-size: 11.5px; font-weight: 800; letter-spacing: .3px; color: var(--accent);
+  }
+  .full .desc { font-size: 13.5px; font-weight: 700; color: var(--ink); letter-spacing: -0.3px; line-height: 1.55; }
+
+  /* ===== CTA ===== */
+  .cta {
+    display: block; margin-top: 20px; padding: 15px 18px;
+    background: var(--accent); color: #12161f;
+    border: 0; border-radius: 14px;
+    font-size: 15.5px; font-weight: 800; font-family: inherit; letter-spacing: -0.3px;
+    text-decoration: none; cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .cta:hover { background: var(--accent-2); }
+  .cta:active { transform: scale(.98); }
+  .cta[aria-disabled="true"] {
+    background: var(--card-2); color: var(--sub);
+    border: 1px solid var(--line); cursor: default; pointer-events: none;
+  }
+
+  .copyright {
+    max-width: 380px; font-size: 11px; color: var(--sub);
+    opacity: .7; text-align: center; letter-spacing: -0.2px;
+  }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<div class="g-social">
+  <a href="https://www.instagram.com/yudit_life/" target="_blank" rel="noopener" aria-label="인스타그램 yudit_life">
+    <svg class="soc-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#FEDA75"/><stop offset=".3" stop-color="#FA7E1E"/><stop offset=".6" stop-color="#D62976"/><stop offset=".9" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/>
+      </linearGradient></defs>
+      <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="url(#ig)"/>
+      <rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" stroke-width="2"/>
+      <circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="2"/>
+      <circle cx="16.6" cy="7.4" r="1.2" fill="#fff"/>
+    </svg>
+    <span>@yudit_life</span>
+  </a>
+  <a href="https://blog.naver.com/yudit_" target="_blank" rel="noopener" aria-label="네이버 블로그">
+    <svg class="soc-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="#03C75A"/>
+      <text x="12" y="16.6" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">blog</text>
+    </svg>
+    <span>yudit blog</span>
+  </a>
+</div>
+
+<main class="panel">
+  <span class="badge">무료판 사용 종료</span>
+  <h1 class="p-title">무료판 사용은<br>종료되었습니다</h1>
+
+  <p class="p-note">
+    업그레이드 된 <strong>자소서+면접 올인원 가이드</strong>를<br>만나보세요
+  </p>
+
+  <section class="full">
+    <ul>
+      <li>
+        <span class="lab">신입편</span>
+        <div class="desc">자소서+면접 올인원 프롬프트</div>
+      </li>
+      <li>
+        <span class="lab">경력편</span>
+        <div class="desc">자소서+면접+경력기술서 올인원 프롬프트</div>
+      </li>
+    </ul>
+  </section>
+
+  <a class="cta" id="cta" href="#" rel="noopener">올인원 가이드 보러 가기</a>
+</main>
+
+<p class="copyright">© yudit. 무단 복제·배포·재판매 금지.</p>
+
+<script>
+  // ★ 올인원 가이드 판매 페이지 주소 — 바꿀 곳은 여기 한 줄뿐입니다.
+  var FULL_URL = '';
+
+  (function () {
+    var cta = document.getElementById('cta');
+    if (FULL_URL) {
+      cta.href = FULL_URL;
+      cta.target = '_blank';
+    } else {
+      // 주소를 아직 안 넣었으면 눌리지 않게 막아둡니다 (잘못된 링크로 나가는 것 방지)
+      cta.setAttribute('aria-disabled', 'true');
+      cta.removeAttribute('href');
+      cta.textContent = '링크 준비 중';
+    }
+  })();
+</script>
+
+</body>
+</html>
